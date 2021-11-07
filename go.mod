@@ -5,6 +5,9 @@ go 1.17
 require (
 	github.com/hashicorp/consul/api v1.11.0
 	go.uber.org/zap v1.19.1
+)
+
+require (
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect

@@ -62,7 +62,7 @@ type ServicesPoolsOpts struct {
 // NewServicesPool create new Services Pool
 // based on given params
 func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
-	return &ServicesPool{
+	pool := &ServicesPool{
 		discovery:         opts.Discovery,
 		discoveryInterval: opts.DiscoveryInterval,
 		name:              opts.Name,
@@ -70,6 +70,12 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 		stop:              make(chan struct{}),
 		MutationFnc:       opts.MutationFnc,
 	}
+
+	if err := pool.DiscoverServices(); err != nil {
+		logger.Log().Error(fmt.Errorf("error discovering %s services: %w", pool.name, err).Error())
+	}
+
+	return pool
 }
 
 // Start run service pool discovering
