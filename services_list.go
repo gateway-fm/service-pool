@@ -34,6 +34,21 @@ type IServicesList interface {
 	// all healthy services periodically
 	HealthChecksLoop()
 
+	// TryUpService recursively try to up service
+	TryUpService(srv service.IService, try int)
+
+	// RemoveFromHealthy remove service
+	// from healthy slice
+	RemoveFromHealthy(index int)
+
+	// ToJail add given unhealthy
+	// service to jail map
+	ToJail(srv service.IService)
+
+	// RemoveFromJail remove given
+	// service from jail map
+	RemoveFromJail(srv service.IService)
+
 	// Close stop service list hasrvling
 	Close()
 }
@@ -136,32 +151,6 @@ func (l *ServicesList) IsServiceExists(srv service.IService) bool {
 	return false
 }
 
-// isServiceInJail check if service exist in jail
-func (l *ServicesList) isServiceInJail(srv service.IService) bool {
-	l.muJail.Lock()
-	defer l.muJail.Unlock()
-
-	if _, ok := l.jail[srv.ID()]; ok {
-		return true
-	}
-
-	return false
-}
-
-// isServiceInHealthy check if service exist in
-// healthy slice
-func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
-	l.muMain.RLock()
-	defer l.muMain.RUnlock()
-
-	for _, oldService := range l.Healthy() {
-		if srv.ID() == oldService.ID() {
-			return true
-		}
-	}
-	return false
-}
-
 // HealthChecks pings the healthy services
 // and update the status
 func (l *ServicesList) HealthChecks() {
@@ -177,10 +166,10 @@ func (l *ServicesList) HealthChecks() {
 		if err := srv.HealthCheck(); err != nil {
 			logger.Log().Warn(fmt.Errorf("healthcheck error on %s service %s: %w", l.serviceName, srv.ID(), err).Error())
 
-			l.removeFromHealthy(i)
-			l.toJail(srv)
+			l.RemoveFromHealthy(i)
+			l.ToJail(srv)
 
-			go l.tryUpService(srv, 0)
+			go l.TryUpService(srv, 0)
 
 			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()))
 			continue
@@ -207,16 +196,11 @@ func (l *ServicesList) HealthChecksLoop() {
 	}
 }
 
-// Close stop service list handling
-func (l *ServicesList) Close() {
-	close(l.stop)
-}
-
-// tryUpService recursively try to up service
-func (l *ServicesList) tryUpService(srv service.IService, try int) {
+// TryUpService recursively try to up service
+func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	if l.tryUpTries != 0 && try >= l.tryUpTries {
 		logger.Log().Warn(fmt.Sprintf("maximum %d try to Up %s service %s reached.... service will remove from service list", l.tryUpTries, l.serviceName, srv.ID()))
-		l.removeFromJail(srv)
+		l.RemoveFromJail(srv)
 		return
 	}
 
@@ -226,40 +210,71 @@ func (l *ServicesList) tryUpService(srv service.IService, try int) {
 		logger.Log().Warn(fmt.Errorf("service %s healthcheck error: %w", srv.ID(), err).Error())
 
 		sleep(l.tryUpInterval, l.stop)
-		l.tryUpService(srv, try+1)
+		l.TryUpService(srv, try+1)
 		return
 	}
 
 	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()))
-	l.removeFromJail(srv)
+	l.RemoveFromJail(srv)
 	l.Add(srv)
 }
 
-// removeFromHealthy remove service
+// RemoveFromHealthy remove service
 // from healthy slice
-func (l *ServicesList) removeFromHealthy(index int) {
+func (l *ServicesList) RemoveFromHealthy(index int) {
 	l.muMain.Lock()
 	defer l.muMain.Unlock()
 
 	l.healthy = deleteFromSlice(l.healthy, index)
 }
 
-// toJail add given unhealthy
+// ToJail add given unhealthy
 // service to jail map
-func (l *ServicesList) toJail(srv service.IService) {
+func (l *ServicesList) ToJail(srv service.IService) {
 	l.muJail.Lock()
 	defer l.muJail.Unlock()
 
 	l.jail[srv.ID()] = srv
 }
 
-// removeFromJail remove given
+// RemoveFromJail remove given
 // service from jail map
-func (l *ServicesList) removeFromJail(srv service.IService) {
+func (l *ServicesList) RemoveFromJail(srv service.IService) {
 	l.muJail.Lock()
 	defer l.muJail.Unlock()
 
 	delete(l.jail, srv.ID())
+}
+
+// Close stop service list handling
+func (l *ServicesList) Close() {
+	close(l.stop)
+}
+
+// isServiceInJail check if service exist in jail
+func (l *ServicesList) isServiceInJail(srv service.IService) bool {
+	l.muJail.Lock()
+	defer l.muJail.Unlock()
+
+	if _, ok := l.jail[srv.ID()]; ok {
+		return true
+	}
+
+	return false
+}
+
+// isServiceInHealthy check if service exist in
+// healthy slice
+func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
+	l.muMain.RLock()
+	defer l.muMain.RUnlock()
+
+	for _, oldService := range l.Healthy() {
+		if srv.ID() == oldService.ID() {
+			return true
+		}
+	}
+	return false
 }
 
 // nextIndex atomically increase the
