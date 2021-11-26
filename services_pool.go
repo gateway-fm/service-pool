@@ -58,7 +58,7 @@ type ServicesPoolsOpts struct {
 
 	MutationFnc func(srv service.IService) (service.IService, error)
 
-	CustomList *ServicesList
+	CustomList IServicesList
 }
 
 // NewServicesPool create new Services Pool
