@@ -57,6 +57,8 @@ type ServicesPoolsOpts struct {
 	ListOpts          *ServicesListOpts           // service list configuration
 
 	MutationFnc func(srv service.IService) (service.IService, error)
+
+	CustomList *ServicesList
 }
 
 // NewServicesPool create new Services Pool
@@ -66,9 +68,15 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 		discovery:         opts.Discovery,
 		discoveryInterval: opts.DiscoveryInterval,
 		name:              opts.Name,
-		list:              NewServicesList(opts.Name, opts.ListOpts),
 		stop:              make(chan struct{}),
 		MutationFnc:       opts.MutationFnc,
+	}
+
+	if opts.CustomList != nil {
+		pool.list = opts.CustomList
+	} else {
+		pool.list = NewServicesList(opts.Name, opts.ListOpts)
+
 	}
 
 	if err := pool.DiscoverServices(); err != nil {
