@@ -28,6 +28,9 @@ type IServicesPool interface {
 	// all healthy services in pool
 	Count() int
 
+	// List return ServicesPool ServicesList instance
+	List() IServicesList
+
 	// Close stop all service pool
 	Close()
 }
@@ -128,6 +131,11 @@ func (p *ServicesPool) NextService() service.IService {
 // all healthy services in pool
 func (p *ServicesPool) Count() int {
 	return len(p.list.Healthy())
+}
+
+// List return ServicesPool ServicesList instance
+func (p *ServicesPool) List() IServicesList {
+	return p.list
 }
 
 // Close stop all service pool
