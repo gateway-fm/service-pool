@@ -31,11 +31,11 @@ type BaseService struct {
 }
 
 // NewService create new BaseService with address and discovery
-func NewService(address string) IService {
+func NewService(address, transportProtocol string) IService {
 	return &BaseService{
 		id:      generateServiceID(address),
 		status:  StatusUnHealthy,
-		address: address,
+		address: transportProtocol + address,
 	}
 }
 
