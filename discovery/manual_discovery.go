@@ -20,7 +20,7 @@ func NewManualDiscovery(addrs ...string) (IServiceDiscovery, error) {
 // blockchain addresses for requested networks
 func (d *ManualDiscovery) Discover(string) (nodes []service.IService, err error) {
 	for _, n := range d.addresses {
-		nodes = append(nodes, service.NewService(n))
+		nodes = append(nodes, service.NewService(n, ""))
 	}
 	return
 }
