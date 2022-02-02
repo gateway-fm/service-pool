@@ -6,9 +6,9 @@ import (
 	"github.com/gateway-fm/service-pool/service"
 )
 
-// sleep is a helper function to sleep
+// Sleep is a helper function to Sleep
 // with able to cancel timer
-func sleep(t time.Duration, cancelCh <-chan struct{}) {
+func Sleep(t time.Duration, cancelCh <-chan struct{}) {
 	timer := time.NewTimer(t)
 	defer timer.Stop()
 
