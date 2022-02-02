@@ -31,11 +31,11 @@ type BaseService struct {
 }
 
 // NewService create new BaseService with address and discovery
-func NewService(address string) IService {
+func NewService(address, transportProtocol string) IService {
 	return &BaseService{
 		id:      generateServiceID(address),
 		status:  StatusUnHealthy,
-		address: address,
+		address: formatAddress(address, transportProtocol),
 	}
 }
 
@@ -69,4 +69,13 @@ func generateServiceID(addr string) string {
 	sum := h.Sum(nil)
 
 	return hex.EncodeToString(sum)
+}
+
+// formatAddress create new address from given
+// basic address and transport protocol strings
+func formatAddress(address, transportProtocol string) string {
+	if transportProtocol == "" {
+		return address
+	}
+	return transportProtocol + address
 }
