@@ -28,7 +28,10 @@ type IServicesPool interface {
 	// all healthy services in pool
 	Count() int
 
-	// Close stop all service pool
+	// List return ServicesPool ServicesList instance
+	List() IServicesList
+
+	// Close Stop all service pool
 	Close()
 }
 
@@ -130,7 +133,12 @@ func (p *ServicesPool) Count() int {
 	return len(p.list.Healthy())
 }
 
-// Close stop all service pool
+// List return ServicesPool ServicesList instance
+func (p *ServicesPool) List() IServicesList {
+	return p.list
+}
+
+// Close Stop all service pool
 func (p *ServicesPool) Close() {
 	p.list.Close()
 	close(p.stop)
@@ -144,14 +152,14 @@ func (p *ServicesPool) discoverServicesLoop() {
 	for {
 		select {
 		case <-p.stop:
-			logger.Log().Warn("stop discovery loop")
+			logger.Log().Warn("Stop discovery loop")
 			return
 		default:
 			if err := p.DiscoverServices(); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
 			}
 
-			sleep(p.discoveryInterval, p.stop)
+			Sleep(p.discoveryInterval, p.stop)
 		}
 	}
 }

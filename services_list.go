@@ -49,7 +49,7 @@ type IServicesList interface {
 	// service from jail map
 	RemoveFromJail(srv service.IService)
 
-	// Close stop service list hasrvling
+	// Close Stop service list hasrvling
 	Close()
 }
 
@@ -67,12 +67,12 @@ type ServicesList struct {
 	muMain sync.Mutex
 	muJail sync.Mutex
 
-	tryUpTries int
+	TryUpTries int
 
-	checkInterval time.Duration
-	tryUpInterval time.Duration
+	CheckInterval time.Duration
+	TryUpInterval time.Duration
 
-	stop chan struct{}
+	Stop chan struct{}
 }
 
 // ServicesListOpts is options that needs
@@ -89,10 +89,10 @@ func NewServicesList(serviceName string, opts *ServicesListOpts) IServicesList {
 	return &ServicesList{
 		serviceName:   serviceName,
 		jail:          make(map[string]service.IService),
-		tryUpTries:    opts.TryUpTries,
-		checkInterval: opts.ChecksInterval,
-		tryUpInterval: opts.TryUpInterval,
-		stop:          make(chan struct{}),
+		TryUpTries:    opts.TryUpTries,
+		CheckInterval: opts.ChecksInterval,
+		TryUpInterval: opts.TryUpInterval,
+		Stop:          make(chan struct{}),
 	}
 }
 
@@ -186,20 +186,20 @@ func (l *ServicesList) HealthChecksLoop() {
 
 	for {
 		select {
-		case <-l.stop:
+		case <-l.Stop:
 			logger.Log().Warn("stop healthchecks loop")
 			return
 		default:
 			l.HealthChecks()
-			sleep(l.checkInterval, l.stop)
+			Sleep(l.CheckInterval, l.Stop)
 		}
 	}
 }
 
 // TryUpService recursively try to up service
 func (l *ServicesList) TryUpService(srv service.IService, try int) {
-	if l.tryUpTries != 0 && try >= l.tryUpTries {
-		logger.Log().Warn(fmt.Sprintf("maximum %d try to Up %s service %s reached.... service will remove from service list", l.tryUpTries, l.serviceName, srv.ID()))
+	if l.TryUpTries != 0 && try >= l.TryUpTries {
+		logger.Log().Warn(fmt.Sprintf("maximum %d try to Up %s service %s reached.... service will remove from service list", l.TryUpTries, l.serviceName, srv.ID()))
 		l.RemoveFromJail(srv)
 		return
 	}
@@ -209,7 +209,7 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	if err := srv.HealthCheck(); err != nil {
 		logger.Log().Warn(fmt.Errorf("service %s healthcheck error: %w", srv.ID(), err).Error())
 
-		sleep(l.tryUpInterval, l.stop)
+		Sleep(l.TryUpInterval, l.Stop)
 		l.TryUpService(srv, try+1)
 		return
 	}
@@ -246,9 +246,9 @@ func (l *ServicesList) RemoveFromJail(srv service.IService) {
 	delete(l.jail, srv.ID())
 }
 
-// Close stop service list handling
+// Close Stop service list handling
 func (l *ServicesList) Close() {
-	close(l.stop)
+	close(l.Stop)
 }
 
 // isServiceInJail check if service exist in jail
