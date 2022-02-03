@@ -187,7 +187,7 @@ func (l *ServicesList) HealthChecksLoop() {
 	for {
 		select {
 		case <-l.Stop:
-			logger.Log().Warn("Stop healthchecks loop")
+			logger.Log().Warn("stop healthchecks loop")
 			return
 		default:
 			l.HealthChecks()
