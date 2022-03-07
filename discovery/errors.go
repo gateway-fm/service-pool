@@ -13,6 +13,17 @@ func (e ErrUnsupportedDriver) Error() string {
 	return fmt.Sprintf("unsupported discovery driver %q", e.driver)
 }
 
+// ErrUnsupportedTransportProtocol is error when
+// transport protocol is unsupported
+type ErrUnsupportedTransportProtocol struct {
+	protocol string
+}
+
+// Error is throw error as a string
+func (e ErrUnsupportedTransportProtocol) Error() string {
+	return fmt.Sprintf("unsupported transport protocol %q", e.protocol)
+}
+
 // ErrServiceNotFound is error when
 // given service can't be found
 type ErrServiceNotFound struct {
