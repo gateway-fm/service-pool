@@ -12,7 +12,7 @@ type IServiceDiscovery interface {
 }
 
 // Creator is discovery factory function
-type Creator func(...string) (IServiceDiscovery, error)
+type Creator func(TransportProtocol, ...string) (IServiceDiscovery, error)
 
 // ParseDiscoveryDriver create new addresses discovery
 // Creator based on given discovery driver

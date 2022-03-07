@@ -11,12 +11,13 @@ import (
 // ConsulDiscovery is a Consul implementation of
 // IServiceDiscovery interface
 type ConsulDiscovery struct {
-	client *consul.Client
+	client    *consul.Client
+	transport TransportProtocol
 }
 
 // NewConsulDiscovery create new Consul-driven
 // service Discovery
-func NewConsulDiscovery(addr ...string) (IServiceDiscovery, error) {
+func NewConsulDiscovery(transport TransportProtocol, addr ...string) (IServiceDiscovery, error) {
 	if len(addr) != 1 {
 		return nil, ErrInvalidArgumentsLength{length: len(addr), driver: DriverConsul}
 	}
@@ -31,7 +32,7 @@ func NewConsulDiscovery(addr ...string) (IServiceDiscovery, error) {
 		return nil, fmt.Errorf("connect to consul discovery: %w", err)
 	}
 
-	return &ConsulDiscovery{client: c}, nil
+	return &ConsulDiscovery{client: c, transport: transport}, nil
 }
 
 // Discover and return list of the active
@@ -61,5 +62,5 @@ func (d *ConsulDiscovery) createNodesFromServices(consulServices []*consul.Servi
 // createServiceFromConsul create BaseService model
 // instance from consul service
 func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) service.IService {
-	return service.NewService(fmt.Sprintf("%s:%d", srv.Service.Address, srv.Service.Port), "http://")
+	return service.NewService(fmt.Sprintf("%s:%d", srv.Service.Address, srv.Service.Port))
 }
