@@ -259,9 +259,14 @@ func (l *ServicesList) Shuffle() {
 	defer l.muMain.Unlock()
 	l.muMain.Lock()
 
+	length := len(l.healthy)
+	if length == 0 {
+		return
+	}
+
 	utils.ShuffleSlice(l.healthy)
 
-	newCurrent := utils.RandomUint64(0, uint64(len(l.healthy)))
+	newCurrent := utils.RandomUint64(0, uint64(length))
 	atomic.StoreUint64(&l.current, newCurrent)
 }
 
