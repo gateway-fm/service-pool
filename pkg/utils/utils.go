@@ -27,7 +27,7 @@ func RandomUint64(min, max uint64) uint64 {
 // https://stackoverflow.com/questions/47856543/generate-random-uint64-between-min-and-max
 func uint64Helper(n uint64) uint64 {
 	if n < maxInt64 {
-		return uint64(rand.Int63n(int64(n + 1)))
+		return uint64(rand.Int63n(int64(n)))
 	}
 	x := rand.Uint64()
 	for x > n {
