@@ -149,6 +149,7 @@ func (p *ServicesPool) Close() {
 func (p *ServicesPool) discoverServicesLoop() {
 	logger.Log().Info("start discovery loop")
 
+	onceShuffled := false
 	for {
 		select {
 		case <-p.stop:
@@ -157,6 +158,13 @@ func (p *ServicesPool) discoverServicesLoop() {
 		default:
 			if err := p.DiscoverServices(); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
+			}
+
+			// sync.Once won't work in cases when we call Start() then Close()
+			// and then Start() again
+			if !onceShuffled {
+				p.list.Shuffle()
+				onceShuffled = true
 			}
 
 			Sleep(p.discoveryInterval, p.stop)
