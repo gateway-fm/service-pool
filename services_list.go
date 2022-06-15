@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gateway-fm/service-pool/pkg/logger"
+	"github.com/gateway-fm/service-pool/pkg/utils"
 	"github.com/gateway-fm/service-pool/service"
 )
 
@@ -51,6 +52,9 @@ type IServicesList interface {
 
 	// Close Stop service list hasrvling
 	Close()
+
+	// Shuffle randomly shuffles list
+	Shuffle()
 }
 
 // ServicesList is service list implementation that
@@ -249,6 +253,21 @@ func (l *ServicesList) RemoveFromJail(srv service.IService) {
 // Close Stop service list handling
 func (l *ServicesList) Close() {
 	close(l.Stop)
+}
+
+func (l *ServicesList) Shuffle() {
+	defer l.muMain.Unlock()
+	l.muMain.Lock()
+
+	length := len(l.healthy)
+	if length == 0 {
+		return
+	}
+
+	utils.ShuffleSlice(l.healthy)
+
+	newCurrent := utils.RandomUint64(0, uint64(length))
+	atomic.StoreUint64(&l.current, newCurrent)
 }
 
 // isServiceInJail check if service exist in jail
