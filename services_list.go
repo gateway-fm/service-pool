@@ -144,13 +144,6 @@ func (l *ServicesList) Add(srv service.IService) {
 // IsServiceExists check is given service is
 // already in list (healthy or jail)
 func (l *ServicesList) IsServiceExists(srv service.IService) bool {
-	if srv == nil {
-		logger.Log().Warn("nil srv provided when calling IsServiceExists")
-		// we return true to prevent adding nil service into healthy slice
-		// in DiscoverServices() call
-		return true
-	}
-
 	if l.isServiceInJail(srv) {
 		return true
 	}

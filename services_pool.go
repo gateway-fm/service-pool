@@ -110,6 +110,10 @@ func (p *ServicesPool) DiscoverServices() error {
 			continue
 		}
 
+		if newService == nil {
+			continue
+		}
+
 		mutatedService, err := p.MutationFnc(newService)
 		if err != nil {
 			return fmt.Errorf("mutate new discovered service: %w", err)
