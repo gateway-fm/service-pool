@@ -266,7 +266,7 @@ func (l *ServicesList) Shuffle() {
 
 	utils.ShuffleSlice(l.healthy)
 
-	newCurrent := utils.RandomUint64(0, uint64(length))
+	newCurrent := utils.RandomUint64(length)
 	atomic.StoreUint64(&l.current, newCurrent)
 }
 
@@ -274,6 +274,11 @@ func (l *ServicesList) Shuffle() {
 func (l *ServicesList) isServiceInJail(srv service.IService) bool {
 	defer l.muJail.Unlock()
 	l.muJail.Lock()
+
+	if srv == nil {
+		logger.Log().Warn("nil srv provided when calling isServiceInJail")
+		return false
+	}
 
 	if _, ok := l.jail[srv.ID()]; ok {
 		return true
@@ -285,7 +290,17 @@ func (l *ServicesList) isServiceInJail(srv service.IService) bool {
 // isServiceInHealthy check if service exist in
 // healthy slice
 func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
+	if srv == nil {
+		logger.Log().Warn("nil srv provided when calling isServiceInHealthy")
+		return false
+	}
+
 	for _, oldService := range l.Healthy() {
+		if oldService == nil {
+			logger.Log().Warn("nil oldService in healthy slice of ServicesList")
+			continue
+		}
+
 		if srv.ID() == oldService.ID() {
 			return true
 		}

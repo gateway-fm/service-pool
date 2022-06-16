@@ -18,20 +18,9 @@ func ShuffleSlice(slice []service.IService) {
 	rand.Shuffle(len(slice), swap)
 }
 
-const maxInt64 uint64 = 1<<63 - 1
-
-func RandomUint64(min, max uint64) uint64 {
-	return uint64Helper(max-min) + min
-}
-
-// https://stackoverflow.com/questions/47856543/generate-random-uint64-between-min-and-max
-func uint64Helper(n uint64) uint64 {
-	if n < maxInt64 {
-		return uint64(rand.Int63n(int64(n)))
-	}
-	x := rand.Uint64()
-	for x > n {
-		x = rand.Uint64()
-	}
-	return x
+// RandomUint64 returns a random uint64 in range [0, n) where
+// n max value is int32. We use int type of n because we only use
+// length of healthy nodes slice as an input. And len(slice) has max value of int32.
+func RandomUint64(n int) uint64 {
+	return uint64(rand.Intn(n))
 }
