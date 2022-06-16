@@ -111,6 +111,7 @@ func (p *ServicesPool) DiscoverServices() error {
 		}
 
 		if newService == nil {
+			logger.Log().Warn("newService is nil during discovery")
 			continue
 		}
 
