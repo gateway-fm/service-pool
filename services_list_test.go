@@ -58,7 +58,7 @@ func TestServicesListShuffle(t *testing.T) {
 	expected := selectionFrequency[services[0].ID()]
 	for _, count := range selectionFrequency {
 		if math.Abs(float64(count-expected))/float64(expected) > threshold {
-			t.Errorf("selection frequencies are more than a threshold")
+			t.Errorf("selection frequencies are different more than a threshold")
 		}
 	}
 }
