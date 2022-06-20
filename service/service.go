@@ -61,6 +61,10 @@ func (n *BaseService) Address() string {
 	return n.address
 }
 
+func (n *BaseService) SetStatus(status Status) {
+	n.status = status
+}
+
 // generateServiceID create BaseService unique id by
 // hashing given address string
 func generateServiceID(addr string) string {
