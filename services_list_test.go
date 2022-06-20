@@ -21,7 +21,7 @@ func newHealthyService(addr string) service.IService {
 func TestServicesListShuffle(t *testing.T) {
 	numServices := 20
 	numTries := 50000
-	numServicesToPick := 5 // how many we pick for one try
+	numServicesToPick := 200 // how many we pick for one try
 
 	threshold := 0.1
 	duration, _ := time.ParseDuration("5s")
