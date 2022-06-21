@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/gateway-fm/service-pool/pkg/logger"
 	"github.com/gateway-fm/service-pool/pkg/utils"
 	"github.com/gateway-fm/service-pool/service"
@@ -175,7 +177,9 @@ func (l *ServicesList) HealthChecks() {
 
 			go l.TryUpService(srv, 0)
 
-			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()))
+			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()),
+				zap.Any("healthy", l.healthy),
+				zap.Any("jail", l.jail))
 			continue
 		}
 
@@ -218,7 +222,9 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 		return
 	}
 
-	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()))
+	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()),
+		zap.Any("healthy", l.healthy),
+		zap.Any("jail", l.jail))
 	l.RemoveFromJail(srv)
 	l.Add(srv)
 }
