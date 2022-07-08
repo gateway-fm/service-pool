@@ -40,8 +40,12 @@ type IServicesList interface {
 	// TryUpService recursively try to up service
 	TryUpService(srv service.IService, try int)
 
+	// FromHealthyToJail move Unhealthy service
+	// from Healthy slice to Jail map
 	FromHealthyToJail(index int)
 
+	// FromJailToHealthy move Healthy service
+	// from Jail map to Healthy slice
 	FromJailToHealthy(srv service.IService)
 
 	// RemoveFromJail remove given
@@ -225,6 +229,8 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	l.FromJailToHealthy(srv)
 }
 
+// FromHealthyToJail move Unhealthy service
+// from Healthy slice to Jail map
 func (l *ServicesList) FromHealthyToJail(index int) {
 	srv := l.Healthy()[index]
 
@@ -235,6 +241,8 @@ func (l *ServicesList) FromHealthyToJail(index int) {
 	l.jail[srv.ID()] = srv
 }
 
+// FromJailToHealthy move Healthy service
+// from Jail map to Healthy slice
 func (l *ServicesList) FromJailToHealthy(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
