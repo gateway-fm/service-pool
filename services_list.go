@@ -40,7 +40,7 @@ type IServicesList interface {
 
 	// FromHealthyToJail move Unhealthy service
 	// from Healthy slice to Jail map
-	FromHealthyToJail(index int)
+	FromHealthyToJail(id string)
 
 	// FromJailToHealthy move Healthy service
 	// from Jail map to Healthy slice
@@ -148,6 +148,9 @@ func (l *ServicesList) Add(srv service.IService) {
 // IsServiceExists check is given service is
 // already in list (healthy or jail)
 func (l *ServicesList) IsServiceExists(srv service.IService) bool {
+	defer l.mu.RUnlock()
+	l.mu.RLock()
+
 	if l.isServiceInJail(srv) {
 		return true
 	}
@@ -162,7 +165,7 @@ func (l *ServicesList) IsServiceExists(srv service.IService) bool {
 // HealthChecks pings the healthy services
 // and update the status
 func (l *ServicesList) HealthChecks() {
-	for i, srv := range l.Healthy() {
+	for _, srv := range l.Healthy() {
 		if srv == nil {
 			continue
 		}
@@ -174,11 +177,12 @@ func (l *ServicesList) HealthChecks() {
 		if err := srv.HealthCheck(); err != nil {
 			logger.Log().Warn(fmt.Errorf("healthcheck error on %s service %s: %w", l.serviceName, srv.ID(), err).Error())
 
-			l.FromHealthyToJail(i)
+			go func(service service.IService) {
+				l.FromHealthyToJail(service.ID())
+				logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, service.ID()))
+				l.TryUpService(service, 0)
+			}(srv)
 
-			go l.TryUpService(srv, 0)
-
-			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()))
 			continue
 		}
 
@@ -228,11 +232,27 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 
 // FromHealthyToJail move Unhealthy service
 // from Healthy slice to Jail map
-func (l *ServicesList) FromHealthyToJail(index int) {
-	srv := l.Healthy()[index]
-
+func (l *ServicesList) FromHealthyToJail(id string) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
+
+	var (
+		index = -1
+		srv   service.IService
+	)
+
+	for i, s := range l.healthy {
+		if srv.ID() == id {
+			index = i
+			srv = s
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
 	l.healthy = deleteFromSlice(l.healthy, index)
 
 	l.jail[srv.ID()] = srv
@@ -279,9 +299,6 @@ func (l *ServicesList) Shuffle() {
 
 // isServiceInJail check if service exist in jail
 func (l *ServicesList) isServiceInJail(srv service.IService) bool {
-	defer l.mu.RUnlock()
-	l.mu.RLock()
-
 	if srv == nil {
 		logger.Log().Warn("nil srv provided when calling isServiceInJail")
 		return false
@@ -302,7 +319,7 @@ func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
 		return false
 	}
 
-	for _, oldService := range l.Healthy() {
+	for _, oldService := range l.healthy {
 		if oldService == nil {
 			logger.Log().Warn("nil oldService in healthy slice of ServicesList")
 			continue
