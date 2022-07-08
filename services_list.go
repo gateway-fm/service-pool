@@ -242,7 +242,7 @@ func (l *ServicesList) FromHealthyToJail(id string) {
 	)
 
 	for i, s := range l.healthy {
-		if srv.ID() == id {
+		if s.ID() == id {
 			index = i
 			srv = s
 			break
