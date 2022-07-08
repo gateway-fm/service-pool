@@ -6,8 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/gateway-fm/service-pool/pkg/logger"
 	"github.com/gateway-fm/service-pool/pkg/utils"
 	"github.com/gateway-fm/service-pool/service"
@@ -108,7 +106,10 @@ func (l *ServicesList) Healthy() []service.IService {
 	defer l.mu.RUnlock()
 	l.mu.RLock()
 
-	return l.healthy
+	var healthy []service.IService
+	healthy = append(healthy, l.healthy...)
+
+	return healthy
 }
 
 // Next returns next healthy service
@@ -177,9 +178,7 @@ func (l *ServicesList) HealthChecks() {
 
 			go l.TryUpService(srv, 0)
 
-			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()),
-				zap.Any("healthy", l.healthy),
-				zap.Any("jail", l.jail))
+			logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()))
 			continue
 		}
 
@@ -222,9 +221,7 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 		return
 	}
 
-	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()),
-		zap.Any("healthy", l.healthy),
-		zap.Any("jail", l.jail))
+	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()))
 
 	l.FromJailToHealthy(srv)
 }
