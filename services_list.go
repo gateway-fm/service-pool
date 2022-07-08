@@ -244,10 +244,9 @@ func (l *ServicesList) FromHealthyToJail(index int) {
 // FromJailToHealthy move Healthy service
 // from Jail map to Healthy slice
 func (l *ServicesList) FromJailToHealthy(srv service.IService) {
-	defer l.mu.Unlock()
 	l.mu.Lock()
-
 	delete(l.jail, srv.ID())
+	l.mu.Unlock()
 
 	l.Add(srv)
 }
