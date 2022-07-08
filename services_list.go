@@ -70,7 +70,7 @@ type ServicesList struct {
 
 	jail map[string]service.IService
 
-	muMain sync.Mutex
+	muMain sync.RWMutex
 	muJail sync.Mutex
 
 	TryUpTries int
@@ -104,8 +104,8 @@ func NewServicesList(serviceName string, opts *ServicesListOpts) IServicesList {
 
 // Healthy return slice of all healthy services
 func (l *ServicesList) Healthy() []service.IService {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
+	defer l.muMain.RUnlock()
+	l.muMain.RLock()
 
 	return l.healthy
 }
