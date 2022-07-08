@@ -104,8 +104,6 @@ func NewServicesList(serviceName string, opts *ServicesListOpts) IServicesList {
 
 // Healthy return slice of all healthy services
 func (l *ServicesList) Healthy() []service.IService {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
 
 	return l.healthy
 }
@@ -301,6 +299,8 @@ func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
 		return false
 	}
 
+	defer l.muMain.Unlock()
+	l.muMain.Lock()
 	for _, oldService := range l.Healthy() {
 		if oldService == nil {
 			logger.Log().Warn("nil oldService in healthy slice of ServicesList")
