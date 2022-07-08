@@ -40,19 +40,19 @@ type IServicesList interface {
 	// TryUpService recursively try to up service
 	TryUpService(srv service.IService, try int)
 
-	// RemoveFromHealthy remove service
-	// from healthy slice
-	RemoveFromHealthy(index int)
+	// FromHealthyToJail move Unhealthy service
+	// from Healthy slice to Jail map
+	FromHealthyToJail(index int)
 
-	// ToJail add given unhealthy
-	// service to jail map
-	ToJail(srv service.IService)
+	// FromJailToHealthy move Healthy service
+	// from Jail map to Healthy slice
+	FromJailToHealthy(srv service.IService)
 
 	// RemoveFromJail remove given
 	// service from jail map
 	RemoveFromJail(srv service.IService)
 
-	// Close Stop service list hasrvling
+	// Close Stop service list
 	Close()
 
 	// Shuffle randomly shuffles list
@@ -62,19 +62,20 @@ type IServicesList interface {
 // ServicesList is service list implementation that
 // manage healthchecks, jail and try up mechanics
 type ServicesList struct {
-	current uint64
-
 	serviceName string
+
+	current uint64
 
 	healthy []service.IService
 
 	jail map[string]service.IService
 
-	muMain sync.Mutex
-	muJail sync.Mutex
+	//muMain sync.Mutex
+	//muJail sync.Mutex
 
-	TryUpTries int
+	mu sync.RWMutex
 
+	TryUpTries    int
 	CheckInterval time.Duration
 	TryUpInterval time.Duration
 
@@ -104,6 +105,8 @@ func NewServicesList(serviceName string, opts *ServicesListOpts) IServicesList {
 
 // Healthy return slice of all healthy services
 func (l *ServicesList) Healthy() []service.IService {
+	defer l.mu.RUnlock()
+	l.mu.RLock()
 
 	return l.healthy
 }
@@ -111,8 +114,8 @@ func (l *ServicesList) Healthy() []service.IService {
 // Next returns next healthy service
 // to take a connection
 func (l *ServicesList) Next() service.IService {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
+	defer l.mu.Unlock()
+	l.mu.Lock()
 
 	if len(l.healthy) == 0 {
 		return nil
@@ -134,8 +137,8 @@ func (l *ServicesList) Next() service.IService {
 
 // Add service to the list
 func (l *ServicesList) Add(srv service.IService) {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
+	defer l.mu.Unlock()
+	l.mu.Lock()
 
 	l.healthy = append(l.healthy, srv)
 	logger.Log().Info(fmt.Sprintf("%s service %s with address %s added to list", l.serviceName, srv.ID(), srv.Address()))
@@ -170,8 +173,7 @@ func (l *ServicesList) HealthChecks() {
 		if err := srv.HealthCheck(); err != nil {
 			logger.Log().Warn(fmt.Errorf("healthcheck error on %s service %s: %w", l.serviceName, srv.ID(), err).Error())
 
-			l.RemoveFromHealthy(i)
-			l.ToJail(srv)
+			l.FromHealthyToJail(i)
 
 			go l.TryUpService(srv, 0)
 
@@ -223,33 +225,38 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()),
 		zap.Any("healthy", l.healthy),
 		zap.Any("jail", l.jail))
-	l.RemoveFromJail(srv)
-	l.Add(srv)
+
+	l.FromJailToHealthy(srv)
 }
 
-// RemoveFromHealthy remove service
-// from healthy slice
-func (l *ServicesList) RemoveFromHealthy(index int) {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
+// FromHealthyToJail move Unhealthy service
+// from Healthy slice to Jail map
+func (l *ServicesList) FromHealthyToJail(index int) {
+	srv := l.Healthy()[index]
 
+	defer l.mu.Unlock()
+	l.mu.Lock()
 	l.healthy = deleteFromSlice(l.healthy, index)
-}
-
-// ToJail add given unhealthy
-// service to jail map
-func (l *ServicesList) ToJail(srv service.IService) {
-	defer l.muJail.Unlock()
-	l.muJail.Lock()
 
 	l.jail[srv.ID()] = srv
+}
+
+// FromJailToHealthy move Healthy service
+// from Jail map to Healthy slice
+func (l *ServicesList) FromJailToHealthy(srv service.IService) {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+
+	delete(l.jail, srv.ID())
+
+	l.Add(srv)
 }
 
 // RemoveFromJail remove given
 // service from jail map
 func (l *ServicesList) RemoveFromJail(srv service.IService) {
-	defer l.muJail.Unlock()
-	l.muJail.Lock()
+	defer l.mu.Unlock()
+	l.mu.Lock()
 
 	delete(l.jail, srv.ID())
 }
@@ -260,8 +267,8 @@ func (l *ServicesList) Close() {
 }
 
 func (l *ServicesList) Shuffle() {
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
+	defer l.mu.Unlock()
+	l.mu.Lock()
 
 	length := len(l.healthy)
 	if length == 0 {
@@ -276,8 +283,8 @@ func (l *ServicesList) Shuffle() {
 
 // isServiceInJail check if service exist in jail
 func (l *ServicesList) isServiceInJail(srv service.IService) bool {
-	defer l.muJail.Unlock()
-	l.muJail.Lock()
+	defer l.mu.RUnlock()
+	l.mu.RLock()
 
 	if srv == nil {
 		logger.Log().Warn("nil srv provided when calling isServiceInJail")
@@ -299,8 +306,6 @@ func (l *ServicesList) isServiceInHealthy(srv service.IService) bool {
 		return false
 	}
 
-	defer l.muMain.Unlock()
-	l.muMain.Lock()
 	for _, oldService := range l.Healthy() {
 		if oldService == nil {
 			logger.Log().Warn("nil oldService in healthy slice of ServicesList")
