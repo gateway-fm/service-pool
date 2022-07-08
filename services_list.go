@@ -177,11 +177,11 @@ func (l *ServicesList) HealthChecks() {
 		if err := srv.HealthCheck(); err != nil {
 			logger.Log().Warn(fmt.Errorf("healthcheck error on %s service %s: %w", l.serviceName, srv.ID(), err).Error())
 
-			go func(serviceID string) {
-				l.FromHealthyToJail(srv.ID())
-				logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, srv.ID()))
-				l.TryUpService(srv, 0)
-			}(srv.ID())
+			go func(service service.IService) {
+				l.FromHealthyToJail(service.ID())
+				logger.Log().Warn(fmt.Sprintf("%s service %s added to jail", l.serviceName, service.ID()))
+				l.TryUpService(service, 0)
+			}(srv)
 
 			continue
 		}
@@ -233,10 +233,11 @@ func (l *ServicesList) TryUpService(srv service.IService, try int) {
 // FromHealthyToJail move Unhealthy service
 // from Healthy slice to Jail map
 func (l *ServicesList) FromHealthyToJail(id string) {
-	l.mu.RLock()
+	defer l.mu.Unlock()
+	l.mu.Lock()
 
 	var (
-		index int
+		index = -1
 		srv   service.IService
 	)
 
@@ -244,13 +245,13 @@ func (l *ServicesList) FromHealthyToJail(id string) {
 		if srv.ID() == id {
 			index = i
 			srv = s
+			break
 		}
 	}
 
-	l.mu.RUnlock()
-
-	defer l.mu.Unlock()
-	l.mu.Lock()
+	if index == -1 {
+		return
+	}
 
 	l.healthy = deleteFromSlice(l.healthy, index)
 
