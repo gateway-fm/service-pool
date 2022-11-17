@@ -16,6 +16,9 @@ type IServicesList interface {
 	// Healthy return slice of all healthy services
 	Healthy() []service.IService
 
+	// Unhealthy return slice of all unHealthy services
+	Unhealthy() []service.IService
+
 	// Next returns next healthy service
 	// to take a connection
 	Next() service.IService
@@ -110,6 +113,20 @@ func (l *ServicesList) Healthy() []service.IService {
 	healthy = append(healthy, l.healthy...)
 
 	return healthy
+}
+
+// Unhealthy return slice of all unHealthy services
+func (l *ServicesList) Unhealthy() []service.IService {
+	defer l.mu.RUnlock()
+	l.mu.RLock()
+
+	var unHealthy []service.IService
+
+	for _, s := range l.jail {
+		unHealthy = append(unHealthy, s)
+	}
+
+	return unHealthy
 }
 
 // Next returns next healthy service
