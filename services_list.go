@@ -160,6 +160,7 @@ func (l *ServicesList) Add(srv service.IService) {
 
 	if err := srv.HealthCheck(); err != nil {
 		l.jail[srv.ID()] = srv
+		logger.Log().Warn(fmt.Sprintf("can't be added to healthy pool: %s", err.Error()))
 		return
 	}
 
