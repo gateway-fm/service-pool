@@ -158,6 +158,11 @@ func (l *ServicesList) Add(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
+	if err := srv.HealthCheck(); err != nil {
+		l.jail[srv.ID()] = srv
+		return
+	}
+
 	l.healthy = append(l.healthy, srv)
 	logger.Log().Info(fmt.Sprintf("%s service %s with address %s added to list", l.serviceName, srv.ID(), srv.Address()))
 }
