@@ -16,6 +16,9 @@ type IServicesList interface {
 	// Healthy return slice of all healthy services
 	Healthy() []service.IService
 
+	// Unhealthy return slice of all unHealthy services
+	Unhealthy() []service.IService
+
 	// Next returns next healthy service
 	// to take a connection
 	Next() service.IService
@@ -112,6 +115,20 @@ func (l *ServicesList) Healthy() []service.IService {
 	return healthy
 }
 
+// Unhealthy return slice of all unHealthy services
+func (l *ServicesList) Unhealthy() []service.IService {
+	defer l.mu.RUnlock()
+	l.mu.RLock()
+
+	var unHealthy []service.IService
+
+	for _, s := range l.jail {
+		unHealthy = append(unHealthy, s)
+	}
+
+	return unHealthy
+}
+
 // Next returns next healthy service
 // to take a connection
 func (l *ServicesList) Next() service.IService {
@@ -140,6 +157,13 @@ func (l *ServicesList) Next() service.IService {
 func (l *ServicesList) Add(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
+
+	if err := srv.HealthCheck(); err != nil {
+		l.jail[srv.ID()] = srv
+		logger.Log().Warn(fmt.Sprintf("can't be added to healthy pool: %s", err.Error()))
+		go l.TryUpService(srv, 0)
+		return
+	}
 
 	l.healthy = append(l.healthy, srv)
 	logger.Log().Info(fmt.Sprintf("%s service %s with address %s added to list", l.serviceName, srv.ID(), srv.Address()))
