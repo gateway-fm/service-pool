@@ -21,7 +21,7 @@ func NewManualDiscovery(transport TransportProtocol, addrs ...string) (IServiceD
 // blockchain addresses for requested networks
 func (d *ManualDiscovery) Discover(string) (nodes []service.IService, err error) {
 	for _, n := range d.addresses {
-		nodes = append(nodes, service.NewService(d.transport.FormatAddress(n)))
+		nodes = append(nodes, service.NewService(d.transport.FormatAddress(n), ""))
 	}
 	return
 }
