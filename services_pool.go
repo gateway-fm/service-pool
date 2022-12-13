@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gateway-fm/scriptorium/logger"
+
 	"github.com/gateway-fm/service-pool/discovery"
-	"github.com/gateway-fm/service-pool/pkg/logger"
 	"github.com/gateway-fm/service-pool/service"
 )
 
