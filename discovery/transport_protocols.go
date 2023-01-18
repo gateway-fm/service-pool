@@ -34,9 +34,12 @@ func (s TransportProtocol) String() string {
 // FormatAddress add protocol prefix to
 // given address
 func (s TransportProtocol) FormatAddress(addr string) string {
-	if s == TransportGrpc {
+	if s == TransportGrpc ||
+		strings.Contains(addr, TransportHttps.String()) ||
+		strings.Contains(addr, TransportWss.String()) {
 		return addr
 	}
+
 	return s.String() + addr
 }
 
