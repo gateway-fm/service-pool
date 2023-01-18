@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -31,9 +32,17 @@ func (s TransportProtocol) String() string {
 	return Transports[s] + "://"
 }
 
+const httpsPrefix = "https//"
+
 // FormatAddress add protocol prefix to
 // given address
 func (s TransportProtocol) FormatAddress(addr string) string {
+	fmt.Println(addr)
+
+	if strings.Contains(addr, httpsPrefix) {
+		return TransportHttps.String() + strings.TrimPrefix(addr, httpsPrefix)
+	}
+
 	if s == TransportGrpc ||
 		strings.Contains(addr, TransportHttps.String()) ||
 		strings.Contains(addr, TransportWss.String()) {
