@@ -6,7 +6,7 @@ import (
 )
 
 // Status represent available BaseService Statuses
-type Status int
+type Status int32
 
 const (
 	// StatusHealthy is means that service is active
