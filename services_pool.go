@@ -118,7 +118,8 @@ func (p *ServicesPool) DiscoverServices() error {
 
 		mutatedService, err := p.MutationFnc(newService)
 		if err != nil {
-			return fmt.Errorf("mutate new discovered service: %w", err)
+			logger.Log().Warn(fmt.Sprintf("mutate new discovered service: %s", err))
+			continue
 		}
 
 		p.list.Add(mutatedService)
