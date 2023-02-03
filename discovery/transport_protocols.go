@@ -31,9 +31,22 @@ func (s TransportProtocol) String() string {
 	return Transports[s] + "://"
 }
 
+const (
+	httpsPrefix = "https//"
+	wssPrefix   = "wss//"
+)
+
 // FormatAddress add protocol prefix to
 // given address
 func (s TransportProtocol) FormatAddress(addr string) string {
+	if strings.Contains(addr, httpsPrefix) {
+		return TransportHttps.String() + strings.TrimPrefix(addr, httpsPrefix)
+	}
+
+	if strings.Contains(addr, wssPrefix) {
+		return TransportWss.String() + strings.TrimPrefix(addr, wssPrefix)
+	}
+
 	if s == TransportGrpc ||
 		strings.Contains(addr, TransportHttps.String()) ||
 		strings.Contains(addr, TransportWss.String()) {

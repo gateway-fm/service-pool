@@ -5,6 +5,8 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 
+	"github.com/gateway-fm/scriptorium/logger"
+
 	"github.com/gateway-fm/service-pool/service"
 )
 
@@ -62,5 +64,8 @@ func (d *ConsulDiscovery) createNodesFromServices(consulServices []*consul.Servi
 // createServiceFromConsul create BaseService model
 // instance from consul service
 func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) service.IService {
-	return service.NewService(fmt.Sprintf("%s:%d", d.transport.FormatAddress(srv.Service.Address), srv.Service.Port), srv.Node.Node)
+	addr := d.transport.FormatAddress(srv.Service.Address)
+	logger.Log().Debug(fmt.Sprintf("discovered new service: %s", addr))
+
+	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Node.Node)
 }
