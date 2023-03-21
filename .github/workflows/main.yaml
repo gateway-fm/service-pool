@@ -1,4 +1,4 @@
-name: Lint and Test
+name: Node Pool CI
 
 on:
   push:
@@ -47,3 +47,28 @@ jobs:
 
       - name: Clean workspace
         uses: AutoModality/action-clean@v1.1.0
+
+  release:
+    name: Make Release
+    needs:
+      - test
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag_version.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.RELEASES_ACTION_GITHUB_TOKEN }}
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          token: ${{ secrets.RELEASES_ACTION_GITHUB_TOKEN }}
