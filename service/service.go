@@ -21,6 +21,8 @@ type IService interface {
 
 	// NodeName return node name from discovery
 	NodeName() string
+
+	Tags() []string
 }
 
 // TODO split address field to host and port
@@ -28,19 +30,21 @@ type IService interface {
 // BaseService represent basic service
 // model implementation
 type BaseService struct {
-	id       string // service unique id - sha256(address)
-	status   Status // service current status
-	address  string // service address to connect
-	nodeName string // node name from discovery
+	id       string   // service unique id - sha256(address)
+	status   Status   // service current status
+	address  string   // service address to connect
+	nodeName string   // node name from discovery
+	tags     []string // service tags
 }
 
 // NewService create new BaseService with address and discovery
-func NewService(address, nodeName string) IService {
+func NewService(address, nodeName string, tags []string) IService {
 	return &BaseService{
 		id:       generateServiceID(address),
 		status:   StatusUnHealthy,
 		address:  address,
 		nodeName: nodeName,
+		tags:     tags,
 	}
 }
 
@@ -73,6 +77,10 @@ func (n *BaseService) NodeName() string {
 
 func (n *BaseService) SetStatus(status Status) {
 	n.status = status
+}
+
+func (n *BaseService) Tags() []string {
+	return n.tags
 }
 
 // generateServiceID create BaseService unique id by
