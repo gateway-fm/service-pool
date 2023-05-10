@@ -83,10 +83,6 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 
 	}
 
-	if err := pool.DiscoverServices(nil); err != nil {
-		logger.Log().Error(fmt.Errorf("error discovering %s services: %w", pool.name, err).Error())
-	}
-
 	return pool
 }
 
