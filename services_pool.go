@@ -15,7 +15,7 @@ import (
 type IServicesPool interface {
 	// Start run service pool discovering
 	// and healthchecks loops
-	Start()
+	Start(callback func(srv service.IService) error)
 
 	// DiscoverServices discover all visible active
 	// services via service-discovery
@@ -92,8 +92,8 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 
 // Start run service pool discovering
 // and healthchecks loops
-func (p *ServicesPool) Start() {
-	go p.discoverServicesLoop()
+func (p *ServicesPool) Start(callback func(srv service.IService) error) {
+	go p.discoverServicesLoop(callback)
 	go p.list.HealthChecksLoop()
 }
 
@@ -159,7 +159,7 @@ func (p *ServicesPool) Close() {
 
 // discoverServicesLoop spawn discovery for
 // services periodically
-func (p *ServicesPool) discoverServicesLoop() {
+func (p *ServicesPool) discoverServicesLoop(callback func(srv service.IService) error) {
 	logger.Log().Info("start discovery loop")
 
 	onceShuffled := false
@@ -169,7 +169,7 @@ func (p *ServicesPool) discoverServicesLoop() {
 			logger.Log().Warn("Stop discovery loop")
 			return
 		default:
-			if err := p.DiscoverServices(nil); err != nil {
+			if err := p.DiscoverServices(callback); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
 			}
 
