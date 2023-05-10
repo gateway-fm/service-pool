@@ -10,7 +10,7 @@ import (
 )
 
 func newHealthyService(addr string) service.IService {
-	srv := service.NewService(addr, "")
+	srv := service.NewService(addr, "", nil)
 
 	baseSrv := srv.(*service.BaseService)
 	baseSrv.SetStatus(service.StatusHealthy)

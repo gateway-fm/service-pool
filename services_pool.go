@@ -19,7 +19,7 @@ type IServicesPool interface {
 
 	// DiscoverServices discover all visible active
 	// services via service-discovery
-	DiscoverServices() error
+	DiscoverServices(callback func(srv service.IService) error) error
 
 	// NextService returns next active service
 	// to take a connection
@@ -83,7 +83,7 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 
 	}
 
-	if err := pool.DiscoverServices(); err != nil {
+	if err := pool.DiscoverServices(nil); err != nil {
 		logger.Log().Error(fmt.Errorf("error discovering %s services: %w", pool.name, err).Error())
 	}
 
@@ -99,7 +99,7 @@ func (p *ServicesPool) Start() {
 
 // DiscoverServices discover all visible active
 // services via service-discovery
-func (p *ServicesPool) DiscoverServices() error {
+func (p *ServicesPool) DiscoverServices(callback func(srv service.IService) error) error {
 	newServices, err := p.discovery.Discover(p.name)
 	if err != nil {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
@@ -123,6 +123,12 @@ func (p *ServicesPool) DiscoverServices() error {
 		}
 
 		p.list.Add(mutatedService)
+
+		if callback != nil {
+			if err := callback(mutatedService); err != nil {
+				logger.Log().Warn(fmt.Sprintf("callback on new discovered service: %s", err))
+			}
+		}
 	}
 	return nil
 }
@@ -163,7 +169,7 @@ func (p *ServicesPool) discoverServicesLoop() {
 			logger.Log().Warn("Stop discovery loop")
 			return
 		default:
-			if err := p.DiscoverServices(); err != nil {
+			if err := p.DiscoverServices(nil); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
 			}
 
