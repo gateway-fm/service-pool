@@ -19,7 +19,7 @@ type IServicesPool interface {
 
 	// DiscoverServices discover all visible active
 	// services via service-discovery
-	DiscoverServices(onNewDiscCallback func(srv service.IService) error, onDiscCompletedCallback func()) error
+	DiscoverServices(onNewDiscCallback func(srv service.IService) error) error
 
 	// NextService returns next active service
 	// to take a connection
@@ -98,7 +98,7 @@ func (p *ServicesPool) Start(healthchecks bool, onNewDiscCallback func(srv servi
 
 // DiscoverServices discover all visible active
 // services via service-discovery
-func (p *ServicesPool) DiscoverServices(onNewDiscCallback func(srv service.IService) error, onDiscCompletedCallback func()) error {
+func (p *ServicesPool) DiscoverServices(onNewDiscCallback func(srv service.IService) error) error {
 	newServices, err := p.discovery.Discover(p.name)
 	if err != nil {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
@@ -129,8 +129,6 @@ func (p *ServicesPool) DiscoverServices(onNewDiscCallback func(srv service.IServ
 			}
 		}
 	}
-
-	onDiscCompletedCallback()
 	return nil
 }
 
@@ -170,7 +168,7 @@ func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.I
 			logger.Log().Warn("Stop discovery loop")
 			return
 		default:
-			if err := p.DiscoverServices(onNewDiscCallback, onDiscCompletedCallback); err != nil {
+			if err := p.DiscoverServices(onNewDiscCallback); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
 			}
 
@@ -178,6 +176,7 @@ func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.I
 			// and then Start() again
 			if !onceShuffled {
 				p.list.Shuffle()
+				onDiscCompletedCallback()
 				onceShuffled = true
 			}
 
