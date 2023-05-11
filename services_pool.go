@@ -176,8 +176,11 @@ func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.I
 			// and then Start() again
 			if !onceShuffled {
 				p.list.Shuffle()
-				onDiscCompletedCallback()
 				onceShuffled = true
+
+				if onDiscCompletedCallback != nil {
+					onDiscCompletedCallback()
+				}
 			}
 
 			Sleep(p.discoveryInterval, p.stop)
