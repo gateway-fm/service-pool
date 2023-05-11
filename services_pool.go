@@ -15,7 +15,7 @@ import (
 type IServicesPool interface {
 	// Start run service pool discovering
 	// and healthchecks loops
-	Start(callback func(srv service.IService) error)
+	Start(healthchecks bool, callback func(srv service.IService) error)
 
 	// DiscoverServices discover all visible active
 	// services via service-discovery
@@ -88,9 +88,12 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 
 // Start run service pool discovering
 // and healthchecks loops
-func (p *ServicesPool) Start(callback func(srv service.IService) error) {
+func (p *ServicesPool) Start(healthchecks bool, callback func(srv service.IService) error) {
 	go p.discoverServicesLoop(callback)
-	go p.list.HealthChecksLoop()
+
+	if healthchecks {
+		go p.list.HealthChecksLoop()
+	}
 }
 
 // DiscoverServices discover all visible active
