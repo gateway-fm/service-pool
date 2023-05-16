@@ -19,28 +19,33 @@ jobs:
       GO111MODULE: on
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
 
       - name: Configure git for private modules
         env:
           TOKEN: ${{ secrets.PROXY_PIPELINES_GITHUB_TOKEN }}
         run: git config --global url."https://oauth2:${TOKEN}@github.com/gateway-fm".insteadOf "https://github.com/gateway-fm"
 
-      - name: Setup Golang
-        uses: actions/setup-go@v2
+      # Required by golangci-lint, according to docs
+      - name: Setup Golang Environment
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
-          go-version: "1.19.*" # The Go version to download (if necessary) and use.
+          go-version-file: go.mod
+          cache: true
       - run: |
           go version
           go clean -modcache
-          go mod tidy
+          go mod tidy    
 
       - name: Run linter
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: latest
+          version: v1.52
+          skip-cache: true
           skip-build-cache: true
           skip-pkg-cache: true
+          skip-go-installation: true
+          args: --timeout=10m
 
       - name: Test
         run: go test ./...

@@ -67,5 +67,10 @@ func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) serv
 	addr := d.transport.FormatAddress(srv.Service.Address)
 	logger.Log().Debug(fmt.Sprintf("discovered new service: %s", addr))
 
-	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Node.Node)
+	tagsMap := make(map[string]struct{})
+	for _, t := range srv.Service.Tags {
+		tagsMap[t] = struct{}{}
+	}
+
+	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Node.Node, tagsMap)
 }
