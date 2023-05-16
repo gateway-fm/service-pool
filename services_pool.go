@@ -15,11 +15,11 @@ import (
 type IServicesPool interface {
 	// Start run service pool discovering
 	// and healthchecks loops
-	Start(healthchecks bool, onNewDiscCallback func(srv service.IService) error, onDiscCompletedCallback func())
+	Start(healthchecks bool)
 
 	// DiscoverServices discover all visible active
 	// services via service-discovery
-	DiscoverServices(onNewDiscCallback func(srv service.IService) error) error
+	DiscoverServices() error
 
 	// NextService returns next active service
 	// to take a connection
@@ -34,6 +34,10 @@ type IServicesPool interface {
 
 	// Close Stop all service pool
 	Close()
+
+	SetOnNewDiscCallback(f OnNewDiscCallback)
+
+	SetOnDiscCompletedCallback(f func())
 }
 
 // ServicesPool holds information about reachable
@@ -50,6 +54,10 @@ type ServicesPool struct {
 	stop chan struct{}
 
 	MutationFnc func(srv service.IService) (service.IService, error)
+
+	onNewDiscCallback OnNewDiscCallback
+
+	onDiscCompletedCallback func()
 }
 
 // ServicesPoolsOpts is options that needs
@@ -64,6 +72,8 @@ type ServicesPoolsOpts struct {
 
 	CustomList IServicesList
 }
+
+type OnNewDiscCallback func(srv service.IService) error
 
 // NewServicesPool create new Services Pool
 // based on given params
@@ -88,8 +98,8 @@ func NewServicesPool(opts *ServicesPoolsOpts) IServicesPool {
 
 // Start run service pool discovering
 // and healthchecks loops
-func (p *ServicesPool) Start(healthchecks bool, onNewDiscCallback func(srv service.IService) error, onDiscCompletedCallback func()) {
-	go p.discoverServicesLoop(onNewDiscCallback, onDiscCompletedCallback)
+func (p *ServicesPool) Start(healthchecks bool) {
+	go p.discoverServicesLoop()
 
 	if healthchecks {
 		go p.list.HealthChecksLoop()
@@ -98,7 +108,7 @@ func (p *ServicesPool) Start(healthchecks bool, onNewDiscCallback func(srv servi
 
 // DiscoverServices discover all visible active
 // services via service-discovery
-func (p *ServicesPool) DiscoverServices(onNewDiscCallback func(srv service.IService) error) error {
+func (p *ServicesPool) DiscoverServices() error {
 	newServices, err := p.discovery.Discover(p.name)
 	if err != nil {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
@@ -123,8 +133,8 @@ func (p *ServicesPool) DiscoverServices(onNewDiscCallback func(srv service.IServ
 
 		p.list.Add(mutatedService)
 
-		if onNewDiscCallback != nil {
-			if err := onNewDiscCallback(mutatedService); err != nil {
+		if p.onNewDiscCallback != nil {
+			if err := p.onNewDiscCallback(mutatedService); err != nil {
 				logger.Log().Warn(fmt.Sprintf("callback on new discovered service: %s", err))
 			}
 		}
@@ -156,9 +166,25 @@ func (p *ServicesPool) Close() {
 	close(p.stop)
 }
 
+func (p *ServicesPool) SetOnNewDiscCallback(f OnNewDiscCallback) {
+	if p == nil {
+		return
+	}
+
+	p.onNewDiscCallback = f
+}
+
+func (p *ServicesPool) SetOnDiscCompletedCallback(f func()) {
+	if p == nil {
+		return
+	}
+
+	p.onDiscCompletedCallback = f
+}
+
 // discoverServicesLoop spawn discovery for
 // services periodically
-func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.IService) error, onDiscCompletedCallback func()) {
+func (p *ServicesPool) discoverServicesLoop() {
 	logger.Log().Info("start discovery loop")
 
 	onceShuffled := false
@@ -168,7 +194,7 @@ func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.I
 			logger.Log().Warn("Stop discovery loop")
 			return
 		default:
-			if err := p.DiscoverServices(onNewDiscCallback); err != nil {
+			if err := p.DiscoverServices(); err != nil {
 				logger.Log().Warn(fmt.Errorf("error discovery services: %w", err).Error())
 			}
 
@@ -178,8 +204,8 @@ func (p *ServicesPool) discoverServicesLoop(onNewDiscCallback func(srv service.I
 				p.list.Shuffle()
 				onceShuffled = true
 
-				if onDiscCompletedCallback != nil {
-					onDiscCompletedCallback()
+				if p.onDiscCompletedCallback != nil {
+					p.onDiscCompletedCallback()
 				}
 			}
 
