@@ -72,5 +72,5 @@ func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) serv
 		tagsMap[t] = struct{}{}
 	}
 
-	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Node.Node, tagsMap)
+	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Service.ID, tagsMap)
 }
