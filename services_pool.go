@@ -35,7 +35,9 @@ type IServicesPool interface {
 	// Close Stop all service pool
 	Close()
 
-	SetOnNewDiscCallback(f OnNewDiscCallback)
+	SetOnNewDiscCallback(f OnDiscCallbackE)
+
+	SetOnDiscRemoveCallback(f OnDiscCallback)
 
 	SetOnDiscCompletedCallback(f func())
 }
@@ -55,7 +57,9 @@ type ServicesPool struct {
 
 	MutationFnc func(srv service.IService) (service.IService, error)
 
-	onNewDiscCallback OnNewDiscCallback
+	onNewDiscCallback OnDiscCallbackE
+
+	onDiscRemoveCallback OnDiscCallback
 
 	onDiscCompletedCallback func()
 }
@@ -73,7 +77,8 @@ type ServicesPoolsOpts struct {
 	CustomList IServicesList
 }
 
-type OnNewDiscCallback func(srv service.IService) error
+type OnDiscCallbackE func(srv service.IService) error
+type OnDiscCallback func(srv service.IService)
 
 // NewServicesPool create new Services Pool
 // based on given params
@@ -128,6 +133,10 @@ func (p *ServicesPool) DiscoverServices() error {
 		for index, srv := range p.list.Healthy() {
 			if _, wasDiscovered := newlyDiscoveredIDs[srv.ID()]; !wasDiscovered {
 				p.list.RemoveFromHealthyByIndex(index)
+
+				if p.onDiscRemoveCallback != nil {
+					p.onDiscRemoveCallback(srv)
+				}
 			}
 		}
 
@@ -137,6 +146,10 @@ func (p *ServicesPool) DiscoverServices() error {
 		for srvID, srv := range p.list.Jailed() {
 			if _, wasDiscovered := newlyDiscoveredIDs[srvID]; !wasDiscovered {
 				p.list.RemoveFromJail(srv)
+
+				if p.onDiscRemoveCallback != nil {
+					p.onDiscRemoveCallback(srv)
+				}
 			}
 		}
 
@@ -195,7 +208,7 @@ func (p *ServicesPool) Close() {
 	close(p.stop)
 }
 
-func (p *ServicesPool) SetOnNewDiscCallback(f OnNewDiscCallback) {
+func (p *ServicesPool) SetOnNewDiscCallback(f OnDiscCallbackE) {
 	if p == nil {
 		return
 	}
@@ -209,6 +222,14 @@ func (p *ServicesPool) SetOnDiscCompletedCallback(f func()) {
 	}
 
 	p.onDiscCompletedCallback = f
+}
+
+func (p *ServicesPool) SetOnDiscRemoveCallback(f OnDiscCallback) {
+	if p == nil {
+		return
+	}
+
+	p.onDiscRemoveCallback = f
 }
 
 // discoverServicesLoop spawn discovery for
