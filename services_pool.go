@@ -35,7 +35,9 @@ type IServicesPool interface {
 	// Close Stop all service pool
 	Close()
 
-	SetOnNewDiscCallback(f OnNewDiscCallback)
+	SetOnNewDiscCallback(f OnDiscCallbackE)
+
+	SetOnDiscRemoveCallback(f OnDiscCallback)
 
 	SetOnDiscCompletedCallback(f func())
 }
@@ -55,7 +57,9 @@ type ServicesPool struct {
 
 	MutationFnc func(srv service.IService) (service.IService, error)
 
-	onNewDiscCallback OnNewDiscCallback
+	onNewDiscCallback OnDiscCallbackE
+
+	onDiscRemoveCallback OnDiscCallback
 
 	onDiscCompletedCallback func()
 }
@@ -73,7 +77,8 @@ type ServicesPoolsOpts struct {
 	CustomList IServicesList
 }
 
-type OnNewDiscCallback func(srv service.IService) error
+type OnDiscCallbackE func(srv service.IService) error
+type OnDiscCallback func(srv service.IService)
 
 // NewServicesPool create new Services Pool
 // based on given params
@@ -113,6 +118,42 @@ func (p *ServicesPool) DiscoverServices() error {
 	if err != nil {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
 	}
+
+	// construct map of newly discovered IDs
+	// time complexity is O(len(newServices))
+	newlyDiscoveredIDs := make(map[string]struct{})
+	for _, newService := range newServices {
+		newlyDiscoveredIDs[newService.ID()] = struct{}{}
+	}
+
+	// for every health service check whether it was discovered lastly
+	// if not -- remove it from healthy
+	// time complexity is O(len(healthy)) + O(1)
+	for index, srv := range p.list.Healthy() {
+		if _, wasDiscovered := newlyDiscoveredIDs[srv.ID()]; !wasDiscovered {
+			p.list.RemoveFromHealthyByIndex(index)
+
+			if p.onDiscRemoveCallback != nil {
+				p.onDiscRemoveCallback(srv)
+			}
+			break
+		}
+	}
+
+	// for every jailed service check whether it was discovered lastly
+	// if not -- remove it from jailed
+	// time complexity is O(len(jailed)) + O(1)
+	for srvID, srv := range p.list.Jailed() {
+		if _, wasDiscovered := newlyDiscoveredIDs[srvID]; !wasDiscovered {
+			p.list.RemoveFromJail(srv)
+
+			if p.onDiscRemoveCallback != nil {
+				p.onDiscRemoveCallback(srv)
+			}
+			break
+		}
+	}
+	// the total complexity looks like O(n), but not O(n^2) :D
 
 	// TODO for the best scaling we need to change this part to map-based compare mechanic
 	for _, newService := range newServices {
@@ -166,7 +207,7 @@ func (p *ServicesPool) Close() {
 	close(p.stop)
 }
 
-func (p *ServicesPool) SetOnNewDiscCallback(f OnNewDiscCallback) {
+func (p *ServicesPool) SetOnNewDiscCallback(f OnDiscCallbackE) {
 	if p == nil {
 		return
 	}
@@ -180,6 +221,14 @@ func (p *ServicesPool) SetOnDiscCompletedCallback(f func()) {
 	}
 
 	p.onDiscCompletedCallback = f
+}
+
+func (p *ServicesPool) SetOnDiscRemoveCallback(f OnDiscCallback) {
+	if p == nil {
+		return
+	}
+
+	p.onDiscRemoveCallback = f
 }
 
 // discoverServicesLoop spawn discovery for

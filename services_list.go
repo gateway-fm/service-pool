@@ -54,11 +54,21 @@ type IServicesList interface {
 	// service from jail map
 	RemoveFromJail(srv service.IService)
 
+	// RemoveFromHealthyByIndex removes
+	// service from healthy slice by given srv index in that slice
+	RemoveFromHealthyByIndex(i int)
+
 	// Close Stop service list
 	Close()
 
 	// Shuffle randomly shuffles list
 	Shuffle()
+
+	// CountAll returns sum of num healthy and num jailed services together
+	CountAll() int
+
+	// Jailed returns a copy of jail map
+	Jailed() map[string]service.IService
 }
 
 // ServicesList is service list implementation that
@@ -293,6 +303,13 @@ func (l *ServicesList) FromJailToHealthy(srv service.IService) {
 	l.Add(srv)
 }
 
+func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.healthy = append(l.healthy[:i], l.healthy[i+1:]...)
+}
+
 // RemoveFromJail remove given
 // service from jail map
 func (l *ServicesList) RemoveFromJail(srv service.IService) {
@@ -320,6 +337,30 @@ func (l *ServicesList) Shuffle() {
 
 	newCurrent := utils.RandomUint64(length)
 	atomic.StoreUint64(&l.current, newCurrent)
+}
+
+func (l *ServicesList) CountAll() int {
+	// no mutex lock here since l.Healthy() has its own lock
+	numHealthy := len(l.Healthy())
+
+	// len is not concurrency safe
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return numHealthy + len(l.jail)
+}
+
+func (l *ServicesList) Jailed() map[string]service.IService {
+	defer l.mu.RUnlock()
+	l.mu.RLock()
+
+	// make copy of jailed map
+	jailed := make(map[string]service.IService)
+	for k, v := range l.jail {
+		jailed[k] = v
+	}
+
+	return jailed
 }
 
 // isServiceInJail check if service exist in jail
