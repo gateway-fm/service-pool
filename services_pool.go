@@ -137,6 +137,7 @@ func (p *ServicesPool) DiscoverServices() error {
 				if p.onDiscRemoveCallback != nil {
 					p.onDiscRemoveCallback(srv)
 				}
+				break
 			}
 		}
 
@@ -150,6 +151,7 @@ func (p *ServicesPool) DiscoverServices() error {
 				if p.onDiscRemoveCallback != nil {
 					p.onDiscRemoveCallback(srv)
 				}
+				break
 			}
 		}
 
