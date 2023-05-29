@@ -119,44 +119,41 @@ func (p *ServicesPool) DiscoverServices() error {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
 	}
 
-	if len(newServices) < p.list.CountAll() {
-		// construct map of newly discovered IDs
-		// time complexity is O(len(newServices))
-		newlyDiscoveredIDs := make(map[string]struct{})
-		for _, newService := range newServices {
-			newlyDiscoveredIDs[newService.ID()] = struct{}{}
-		}
-
-		// for every health service check whether it was discovered lastly
-		// if not -- remove it from healthy
-		// time complexity is O(len(healthy)) + O(1)
-		for index, srv := range p.list.Healthy() {
-			if _, wasDiscovered := newlyDiscoveredIDs[srv.ID()]; !wasDiscovered {
-				p.list.RemoveFromHealthyByIndex(index)
-
-				if p.onDiscRemoveCallback != nil {
-					p.onDiscRemoveCallback(srv)
-				}
-				break
-			}
-		}
-
-		// for every jailed service check whether it was discovered lastly
-		// if not -- remove it from jailed
-		// time complexity is O(len(jailed)) + O(1)
-		for srvID, srv := range p.list.Jailed() {
-			if _, wasDiscovered := newlyDiscoveredIDs[srvID]; !wasDiscovered {
-				p.list.RemoveFromJail(srv)
-
-				if p.onDiscRemoveCallback != nil {
-					p.onDiscRemoveCallback(srv)
-				}
-				break
-			}
-		}
-
-		// the total complexity looks like O(n), but not O(n^2) :D
+	// construct map of newly discovered IDs
+	// time complexity is O(len(newServices))
+	newlyDiscoveredIDs := make(map[string]struct{})
+	for _, newService := range newServices {
+		newlyDiscoveredIDs[newService.ID()] = struct{}{}
 	}
+
+	// for every health service check whether it was discovered lastly
+	// if not -- remove it from healthy
+	// time complexity is O(len(healthy)) + O(1)
+	for index, srv := range p.list.Healthy() {
+		if _, wasDiscovered := newlyDiscoveredIDs[srv.ID()]; !wasDiscovered {
+			p.list.RemoveFromHealthyByIndex(index)
+
+			if p.onDiscRemoveCallback != nil {
+				p.onDiscRemoveCallback(srv)
+			}
+			break
+		}
+	}
+
+	// for every jailed service check whether it was discovered lastly
+	// if not -- remove it from jailed
+	// time complexity is O(len(jailed)) + O(1)
+	for srvID, srv := range p.list.Jailed() {
+		if _, wasDiscovered := newlyDiscoveredIDs[srvID]; !wasDiscovered {
+			p.list.RemoveFromJail(srv)
+
+			if p.onDiscRemoveCallback != nil {
+				p.onDiscRemoveCallback(srv)
+			}
+			break
+		}
+	}
+	// the total complexity looks like O(n), but not O(n^2) :D
 
 	// TODO for the best scaling we need to change this part to map-based compare mechanic
 	for _, newService := range newServices {
