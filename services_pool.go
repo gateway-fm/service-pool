@@ -119,6 +119,8 @@ func (p *ServicesPool) DiscoverServices() error {
 		return fmt.Errorf("error discovering %s active: %w", p.name, err)
 	}
 
+	newServices = append([]service.IService{}, newServices[0])
+
 	// construct map of newly discovered IDs
 	// time complexity is O(len(newServices))
 	newlyDiscoveredIDs := make(map[string]struct{})
