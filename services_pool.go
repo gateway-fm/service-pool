@@ -35,9 +35,9 @@ type IServicesPool interface {
 	// Close Stop all service pool
 	Close()
 
-	SetOnNewDiscCallback(f OnDiscCallbackE)
+	SetOnNewDiscCallback(f ServiceCallbackE)
 
-	SetOnDiscRemoveCallback(f OnDiscCallback)
+	SetOnDiscRemoveCallback(f ServiceCallback)
 
 	SetOnDiscCompletedCallback(f func())
 }
@@ -57,9 +57,9 @@ type ServicesPool struct {
 
 	MutationFnc func(srv service.IService) (service.IService, error)
 
-	onNewDiscCallback OnDiscCallbackE
+	onNewDiscCallback ServiceCallbackE
 
-	onDiscRemoveCallback OnDiscCallback
+	onDiscRemoveCallback ServiceCallback
 
 	onDiscCompletedCallback func()
 }
@@ -77,8 +77,8 @@ type ServicesPoolsOpts struct {
 	CustomList IServicesList
 }
 
-type OnDiscCallbackE func(srv service.IService) error
-type OnDiscCallback func(srv service.IService)
+type ServiceCallbackE func(srv service.IService) error
+type ServiceCallback func(srv service.IService)
 
 // NewServicesPool create new Services Pool
 // based on given params
@@ -207,7 +207,7 @@ func (p *ServicesPool) Close() {
 	close(p.stop)
 }
 
-func (p *ServicesPool) SetOnNewDiscCallback(f OnDiscCallbackE) {
+func (p *ServicesPool) SetOnNewDiscCallback(f ServiceCallbackE) {
 	if p == nil {
 		return
 	}
@@ -223,7 +223,7 @@ func (p *ServicesPool) SetOnDiscCompletedCallback(f func()) {
 	p.onDiscCompletedCallback = f
 }
 
-func (p *ServicesPool) SetOnDiscRemoveCallback(f OnDiscCallback) {
+func (p *ServicesPool) SetOnDiscRemoveCallback(f ServiceCallback) {
 	if p == nil {
 		return
 	}
