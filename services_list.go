@@ -69,6 +69,8 @@ type IServicesList interface {
 
 	// Jailed returns a copy of jail map
 	Jailed() map[string]service.IService
+
+	SetOnSrvAddCallback(f ServiceCallbackE)
 }
 
 // ServicesList is service list implementation that
@@ -92,6 +94,8 @@ type ServicesList struct {
 	TryUpInterval time.Duration
 
 	Stop chan struct{}
+
+	onSrvAddCallback ServiceCallbackE
 }
 
 // ServicesListOpts is options that needs
@@ -178,6 +182,12 @@ func (l *ServicesList) Add(srv service.IService) {
 
 	l.healthy = append(l.healthy, srv)
 	logger.Log().Info(fmt.Sprintf("%s service %s with address %s added to list", l.serviceName, srv.ID(), srv.Address()))
+
+	if l.onSrvAddCallback != nil {
+		if err := l.onSrvAddCallback(srv); err != nil {
+			logger.Log().Warn(fmt.Sprintf("on service add callback error: %s", err.Error()))
+		}
+	}
 }
 
 // IsServiceExists check is given service is
@@ -361,6 +371,14 @@ func (l *ServicesList) Jailed() map[string]service.IService {
 	}
 
 	return jailed
+}
+
+func (l *ServicesList) SetOnSrvAddCallback(f ServiceCallbackE) {
+	if l == nil {
+		return
+	}
+
+	l.onSrvAddCallback = f
 }
 
 // isServiceInJail check if service exist in jail
