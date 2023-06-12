@@ -40,8 +40,6 @@ type IServicesPool interface {
 	SetOnDiscRemoveCallback(f ServiceCallback)
 
 	SetOnDiscCompletedCallback(f func())
-
-	SetOnSrvAddCallback(f ServiceCallbackE)
 }
 
 // ServicesPool holds information about reachable
@@ -231,14 +229,6 @@ func (p *ServicesPool) SetOnDiscRemoveCallback(f ServiceCallback) {
 	}
 
 	p.onDiscRemoveCallback = f
-}
-
-func (p *ServicesPool) SetOnSrvAddCallback(f ServiceCallbackE) {
-	if p == nil {
-		return
-	}
-
-	p.list.SetOnSrvAddCallback(f)
 }
 
 // discoverServicesLoop spawn discovery for

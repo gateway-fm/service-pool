@@ -185,7 +185,7 @@ func (l *ServicesList) Add(srv service.IService) {
 
 	if l.onSrvAddCallback != nil {
 		if err := l.onSrvAddCallback(srv); err != nil {
-			logger.Log().Warn(fmt.Sprintf("on service add callback error: %s", err.Error()))
+			logger.Log().Warn(fmt.Sprintf("2on service add callback error: %s", err.Error()))
 		}
 	}
 }
