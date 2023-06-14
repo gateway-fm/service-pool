@@ -9,15 +9,6 @@ import (
 	"github.com/gateway-fm/service-pool/service"
 )
 
-func newHealthyService(addr string) service.IService {
-	srv := service.NewService(addr, "", nil)
-
-	baseSrv := srv.(*service.BaseService)
-	baseSrv.SetStatus(service.StatusHealthy)
-
-	return baseSrv
-}
-
 func TestServicesListShuffle(t *testing.T) {
 	numServices := 20
 	numTries := 50000
