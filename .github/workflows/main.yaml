@@ -47,7 +47,7 @@ jobs:
           skip-go-installation: true
           args: --timeout=10m
 
-      - name: generate test generate coverage
+      - name: run tests and generate coverage
         run: go test ./... -coverprofile=./cover.out
 
       - name: check test coverage
