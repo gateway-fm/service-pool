@@ -47,11 +47,29 @@ jobs:
           skip-go-installation: true
           args: --timeout=10m
 
-      - name: Test
-        run: go test ./...
+      - name: run tests and generate coverage
+        run: go test ./... -coverprofile=./cover.out
 
-      - name: Clean workspace
-        uses: AutoModality/action-clean@v1.1.0
+      - name: check test coverage
+        id: coverage ## this step must have id
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: cover.out
+          local-prefix: github.com/org/project
+          threshold-file: 30
+          threshold-package: 30
+          threshold-total: 30
+
+      - name: make coverage badge
+        uses: action-badges/core@0.2.2
+        if: contains(github.ref, 'main')
+        with:
+          label: coverage
+          message: ${{ steps.coverage.outputs.badge-text }}
+          message-color: ${{ steps.coverage.outputs.badge-color }}
+          file-name: coverage.svg
+          badge-branch: badges ## orphan branch where badge will be committed
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
   release:
     name: Make Release
