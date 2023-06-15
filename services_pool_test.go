@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"github.com/gateway-fm/service-pool/discovery"
 	"github.com/gateway-fm/service-pool/service"
 	"testing"
 	"time"
@@ -63,5 +64,107 @@ func TestServicesPoolHealthCheckLoop(t *testing.T) {
 
 	if healthchecksDoneCount > 5 { // 5 is because 1 (healthcheck during add) + 1 (seconds passed) + 3 (seconds passed)
 		t.Errorf("Too much healthchecks are done")
+	}
+}
+
+func TestServicesPoolCustomList(t *testing.T) {
+	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, "localhost")
+
+	customList := NewServicesList("testServiceList", &ServicesListOpts{
+		TryUpTries:     100,
+		TryUpInterval:  100 * time.Second,
+		ChecksInterval: 100 * time.Second,
+	})
+	customList.Add(&healthyService{0, &service.BaseService{}})
+
+	opts := &ServicesPoolsOpts{
+		Name:              "TestServicePool",
+		Discovery:         manualDisc,
+		DiscoveryInterval: 1 * time.Second,
+		ListOpts: &ServicesListOpts{
+			TryUpTries:     5,
+			TryUpInterval:  1 * time.Second,
+			ChecksInterval: 1 * time.Second,
+		},
+		MutationFnc: func(srv service.IService) (service.IService, error) {
+			return srv, nil
+		},
+		CustomList: customList,
+	}
+	pool := NewServicesPool(opts)
+
+	if pool.List().Next() == nil {
+		t.Errorf("unexpected no healthy services")
+	}
+
+	if pool.List().Unhealthy() != nil {
+		t.Errorf("unexpected unhealthy services")
+	}
+}
+
+func TestServicesPoolDiscoveryError(t *testing.T) {
+	consulDisc, _ := discovery.NewConsulDiscovery(discovery.TransportHttp, "localhost")
+	opts := &ServicesPoolsOpts{
+		Name:              "TestServicePool",
+		Discovery:         consulDisc,
+		DiscoveryInterval: 1 * time.Second,
+		ListOpts: &ServicesListOpts{
+			TryUpTries:     5,
+			TryUpInterval:  1 * time.Second,
+			ChecksInterval: 1 * time.Second,
+		},
+		MutationFnc: func(srv service.IService) (service.IService, error) {
+			return srv, nil
+		},
+	}
+
+	pool := NewServicesPool(opts)
+	if err := pool.DiscoverServices(); err == nil {
+		t.Errorf("unexpected nil error during consul discovery")
+	}
+}
+
+func TestServicesPoolClose(t *testing.T) {
+	pool := newServicesPool(1*time.Second, 1*time.Second, healthySrvMutationFunc)
+	pool.Start(true)
+
+	time.Sleep(200 * time.Millisecond)
+
+	if pool.NextService() == nil {
+		t.Errorf("unexpected no healthy services")
+	}
+
+	pool.List().RemoveFromHealthyByIndex(0)
+	pool.Close()
+	time.Sleep(1 * time.Second)
+
+	if pool.NextService() != nil {
+		t.Errorf("unexpected healthy service was found")
+	}
+}
+
+func TestServicesPoolCallbacks(t *testing.T) {
+	pool := newServicesPool(1*time.Second, 1*time.Second, healthySrvMutationFunc)
+
+	onNewDiscIsExecuted := false
+	pool.SetOnNewDiscCallback(func(srv service.IService) error {
+		onNewDiscIsExecuted = true
+		return nil
+	})
+
+	onDiscCompletedIsExecuted := false
+	pool.SetOnDiscCompletedCallback(func() {
+		onDiscCompletedIsExecuted = true
+	})
+
+	pool.Start(true)
+	time.Sleep(200 * time.Millisecond)
+
+	if !onNewDiscIsExecuted {
+		t.Errorf("onNewDiscCallback was not executed")
+	}
+
+	if !onDiscCompletedIsExecuted {
+		t.Errorf("onDiscCompletedCallback was not executed")
 	}
 }
