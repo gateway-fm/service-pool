@@ -53,3 +53,26 @@ func TestServicesListShuffle(t *testing.T) {
 		}
 	}
 }
+
+func TestServicesListTryUp(t *testing.T) {
+	list := NewServicesList("testServicesList", &ServicesListOpts{
+		TryUpTries:     5,
+		TryUpInterval:  1 * time.Second,
+		ChecksInterval: 1 * time.Second,
+	})
+
+	srv := &healthyService{0, &service.BaseService{}}
+
+	list.Add(srv)
+	list.FromHealthyToJail(srv.ID())
+
+	if list.CountAll() != 1 {
+		t.Errorf("unexpected num of services in list")
+	}
+
+	list.TryUpService(srv, 0)
+
+	if list.Next() == nil {
+		t.Errorf("unexpected no healthy services")
+	}
+}
