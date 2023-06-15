@@ -1,10 +1,11 @@
 package pool
 
 import (
-	"github.com/gateway-fm/service-pool/discovery"
-	"github.com/gateway-fm/service-pool/service"
 	"testing"
 	"time"
+
+	"github.com/gateway-fm/service-pool/discovery"
+	"github.com/gateway-fm/service-pool/service"
 )
 
 // TestServicesPoolStart tests whether discovery loop is spawned on pool.Start()
