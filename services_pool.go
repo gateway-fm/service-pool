@@ -157,10 +157,6 @@ func (p *ServicesPool) DiscoverServices() error {
 
 	// TODO for the best scaling we need to change this part to map-based compare mechanic
 	for _, newService := range newServices {
-		if p.list.IsServiceExists(newService) {
-			continue
-		}
-
 		if newService == nil {
 			logger.Log().Warn("newService is nil during discovery")
 			continue
@@ -172,13 +168,16 @@ func (p *ServicesPool) DiscoverServices() error {
 			continue
 		}
 
-		p.list.Add(mutatedService)
-
 		if p.onNewDiscCallback != nil {
 			if err := p.onNewDiscCallback(mutatedService); err != nil {
 				logger.Log().Warn(fmt.Sprintf("callback on new discovered service: %s", err))
 			}
 		}
+
+		if p.list.IsServiceExists(newService) {
+			continue
+		}
+		p.list.Add(mutatedService)
 	}
 	return nil
 }
