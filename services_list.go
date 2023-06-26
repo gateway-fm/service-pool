@@ -320,6 +320,10 @@ func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	if err := l.healthy[i].Close(); err != nil {
+		logger.Log().Warn(fmt.Errorf("unexpected error during service Close(): %w", err).Error())
+	}
+
 	l.healthy = append(l.healthy[:i], l.healthy[i+1:]...)
 }
 
@@ -328,6 +332,10 @@ func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
 func (l *ServicesList) RemoveFromJail(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
+
+	if err := srv.Close(); err != nil {
+		logger.Log().Warn(fmt.Errorf("unexpected error during service Close(): %w", err).Error())
+	}
 
 	delete(l.jail, srv.ID())
 }
