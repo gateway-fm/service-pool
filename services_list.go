@@ -320,6 +320,7 @@ func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	l.healthy[i].Close()
 	l.healthy = append(l.healthy[:i], l.healthy[i+1:]...)
 }
 
@@ -329,6 +330,7 @@ func (l *ServicesList) RemoveFromJail(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
+	srv.Close()
 	delete(l.jail, srv.ID())
 }
 
