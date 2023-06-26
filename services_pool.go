@@ -167,13 +167,14 @@ func (p *ServicesPool) DiscoverServices() error {
 			continue
 		}
 
-		isServiceExists := p.list.IsServiceExists(newService)
-		var mutatedService service.IService
-
 		// if service doesn't exist in pool or if the callback returns true --
 		// then we do a mutation.
 		// otherwise we prefer not to mutate srv to prevent spawning unnecessary goroutines
-		if !isServiceExists || p.mutationNeededCallback(newService) {
+		isServiceExists := p.list.IsServiceExists(newService)
+		weNeedToMutate := !isServiceExists || (p.mutationNeededCallback != nil && p.mutationNeededCallback(newService))
+		var mutatedService service.IService
+
+		if weNeedToMutate {
 			mutatedService, err = p.MutationFnc(newService)
 			if err != nil {
 				logger.Log().Warn(fmt.Sprintf("mutate new discovered service: %s", err))
@@ -190,7 +191,6 @@ func (p *ServicesPool) DiscoverServices() error {
 		if isServiceExists {
 			continue
 		}
-
 		p.list.Add(mutatedService)
 	}
 	return nil
