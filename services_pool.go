@@ -35,11 +35,13 @@ type IServicesPool interface {
 	// Close Stop all service pool
 	Close()
 
-	SetOnNewDiscCallback(f onNewDiscCallback)
+	SetOnNewDiscCallback(f ServiceCallbackE)
 
 	SetOnDiscRemoveCallback(f ServiceCallback)
 
 	SetOnDiscCompletedCallback(f func())
+
+	SetMutationNeededCallback(f ServiceCallbackB)
 }
 
 // ServicesPool holds information about reachable
@@ -57,11 +59,13 @@ type ServicesPool struct {
 
 	MutationFnc func(srv service.IService) (service.IService, error)
 
-	onNewDiscCallback onNewDiscCallback
+	onNewDiscCallback ServiceCallbackE
 
 	onDiscRemoveCallback ServiceCallback
 
 	onDiscCompletedCallback func()
+
+	mutationNeededCallback ServiceCallbackB
 }
 
 // ServicesPoolsOpts is options that needs
@@ -77,9 +81,9 @@ type ServicesPoolsOpts struct {
 	CustomList IServicesList
 }
 
-type onNewDiscCallback func(srv service.IService, mutationFn func(srv service.IService) (service.IService, error)) error
 type ServiceCallbackE func(srv service.IService) error
 type ServiceCallback func(srv service.IService)
+type ServiceCallbackB func(srv service.IService) bool
 
 // NewServicesPool create new Services Pool
 // based on given params
@@ -163,19 +167,27 @@ func (p *ServicesPool) DiscoverServices() error {
 			continue
 		}
 
-		if p.onNewDiscCallback != nil {
-			if err := p.onNewDiscCallback(newService, p.MutationFnc); err != nil {
-				logger.Log().Warn(fmt.Sprintf("callback on new discovered service: %s", err))
+		isServiceExists := p.list.IsServiceExists(newService)
+		var mutatedService service.IService
+
+		// if service doesn't exist in pool or if the callback returns true --
+		// then we do a mutation.
+		// otherwise we prefer not to mutate srv to prevent spawning unnecessary goroutines
+		if !isServiceExists || p.mutationNeededCallback(newService) {
+			mutatedService, err = p.MutationFnc(newService)
+			if err != nil {
+				logger.Log().Warn(fmt.Sprintf("mutate new discovered service: %s", err))
+				continue
+			}
+
+			if p.onNewDiscCallback != nil {
+				if err := p.onNewDiscCallback(mutatedService); err != nil {
+					logger.Log().Warn(fmt.Sprintf("callback on new discovered service: %s", err))
+				}
 			}
 		}
 
-		if p.list.IsServiceExists(newService) {
-			continue
-		}
-
-		mutatedService, err := p.MutationFnc(newService)
-		if err != nil {
-			logger.Log().Warn(fmt.Sprintf("mutate new discovered service: %s", err))
+		if isServiceExists {
 			continue
 		}
 
@@ -208,7 +220,7 @@ func (p *ServicesPool) Close() {
 	close(p.stop)
 }
 
-func (p *ServicesPool) SetOnNewDiscCallback(f onNewDiscCallback) {
+func (p *ServicesPool) SetOnNewDiscCallback(f ServiceCallbackE) {
 	if p == nil {
 		return
 	}
@@ -230,6 +242,14 @@ func (p *ServicesPool) SetOnDiscRemoveCallback(f ServiceCallback) {
 	}
 
 	p.onDiscRemoveCallback = f
+}
+
+func (p *ServicesPool) SetMutationNeededCallback(f ServiceCallbackB) {
+	if p == nil {
+		return
+	}
+
+	p.mutationNeededCallback = f
 }
 
 // discoverServicesLoop spawn discovery for
