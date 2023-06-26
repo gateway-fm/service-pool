@@ -24,7 +24,7 @@ type IService interface {
 
 	Tags() map[string]struct{}
 
-	Close()
+	Close() error
 }
 
 // TODO split address field to host and port
@@ -85,7 +85,9 @@ func (n *BaseService) Tags() map[string]struct{} {
 	return n.tags
 }
 
-func (n *BaseService) Close() {}
+func (n *BaseService) Close() error {
+	return nil
+}
 
 // generateServiceID create BaseService unique id by
 // hashing given address string
