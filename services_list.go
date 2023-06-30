@@ -71,6 +71,8 @@ type IServicesList interface {
 	Jailed() map[string]service.IService
 
 	SetOnSrvAddCallback(f ServiceCallbackE)
+
+	ModifyHealthy(modifier func(srv service.IService))
 }
 
 // ServicesList is service list implementation that
@@ -390,6 +392,15 @@ func (l *ServicesList) SetOnSrvAddCallback(f ServiceCallbackE) {
 	}
 
 	l.onSrvAddCallback = f
+}
+
+func (l *ServicesList) ModifyHealthy(modifier func(srv service.IService)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for _, srv := range l.healthy {
+		modifier(srv)
+	}
 }
 
 // isServiceInJail check if service exist in jail
