@@ -21,7 +21,8 @@ func Sleep(t time.Duration, cancelCh <-chan struct{}) {
 // deleteFromSlice delete item with
 // given index from provided slice
 func deleteFromSlice(slice []service.IService, index int) []service.IService {
-	copy(slice[index:], slice[index+1:])
-	slice[len(slice)-1] = nil
-	return slice[:len(slice)-1]
+	//https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
+	temp := make([]service.IService, 0)
+	temp = append(temp, slice[:index]...)
+	return append(temp, slice[index+1:]...)
 }
