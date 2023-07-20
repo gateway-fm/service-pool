@@ -172,6 +172,10 @@ func (l *ServicesList) Next() service.IService {
 
 // Add service to the list
 func (l *ServicesList) Add(srv service.IService) {
+	if l.IsServiceExists(srv) {
+		return
+	}
+
 	l.mu.Lock()
 
 	if err := srv.HealthCheck(); err != nil {
