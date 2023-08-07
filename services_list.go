@@ -153,6 +153,7 @@ func (l *ServicesList) Next() service.IService {
 	l.mu.Lock()
 
 	if len(l.healthy) == 0 {
+		logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
 		return nil
 	}
 
@@ -167,12 +168,15 @@ func (l *ServicesList) Next() service.IService {
 			return l.healthy[idx]
 		}
 	}
+
+	logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present after forloop during list's Next() call", l.serviceName))
 	return nil
 }
 
 // Add service to the list
 func (l *ServicesList) Add(srv service.IService) {
 	if l.IsServiceExists(srv) {
+		logger.Log().Info(fmt.Sprintf("list name %s service already exists during Add, service with id %s with nodeName %s", l.serviceName, srv.ID(), srv.NodeName()))
 		return
 	}
 
@@ -180,7 +184,7 @@ func (l *ServicesList) Add(srv service.IService) {
 
 	if err := srv.HealthCheck(); err != nil {
 		l.jail[srv.ID()] = srv
-		logger.Log().Warn(fmt.Sprintf("can't be added to healthy pool: %s", err.Error()))
+		logger.Log().Warn(fmt.Sprintf("list name %s service with id %s with nodeName %s can't be added to healthy due to healthcheck error: %s", l.serviceName, srv.ID(), srv.NodeName(), err.Error()))
 
 		go l.TryUpService(srv, 0)
 
@@ -189,12 +193,12 @@ func (l *ServicesList) Add(srv service.IService) {
 	}
 
 	l.healthy = append(l.healthy, srv)
-	logger.Log().Info(fmt.Sprintf("%s service %s with address %s added to list", l.serviceName, srv.ID(), srv.Address()))
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s with address %s added to list", l.serviceName, srv.ID(), srv.NodeName(), srv.Address()))
 	l.mu.Unlock()
 
 	if l.onSrvAddCallback != nil {
 		if err := l.onSrvAddCallback(srv); err != nil {
-			logger.Log().Warn(fmt.Sprintf("on service add callback error: %s", err.Error()))
+			logger.Log().Warn(fmt.Sprintf("list name %s on service add callback error: %s", l.serviceName, err.Error()))
 		}
 	}
 }
@@ -221,15 +225,14 @@ func (l *ServicesList) IsServiceExists(srv service.IService) bool {
 func (l *ServicesList) HealthChecks() {
 	for _, srv := range l.Healthy() {
 		if srv == nil {
+			logger.Log().Info(fmt.Sprintf("list name %s service is nil during hc loop, skipping the healthcheck for it", l.serviceName))
 			continue
 		}
 
 		// TODO need to implement advanced logging level
 
-		//logger.Log().Info(fmt.Sprintf("checking %s service %s...", l.serviceName, srv.ID()))
-
 		if err := srv.HealthCheck(); err != nil {
-			logger.Log().Warn(fmt.Errorf("healthcheck error on %s service %s: %w", l.serviceName, srv.ID(), err).Error())
+			logger.Log().Warn(fmt.Errorf("healthcheck error on list with name %s, service with id %s with nodeName %s: %w", l.serviceName, srv.ID(), srv.NodeName(), err).Error())
 
 			go func(service service.IService) {
 				l.FromHealthyToJail(service.ID())
@@ -239,8 +242,6 @@ func (l *ServicesList) HealthChecks() {
 
 			continue
 		}
-
-		//logger.Log().Info(fmt.Sprintf("%s service %s on %s is healthy", l.serviceName, srv.ID(), srv.Address()))
 	}
 }
 
@@ -264,22 +265,22 @@ func (l *ServicesList) HealthChecksLoop() {
 // TryUpService recursively try to up service
 func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	if l.TryUpTries != 0 && try >= l.TryUpTries {
-		logger.Log().Warn(fmt.Sprintf("maximum %d try to Up %s service %s reached.... service will remove from service list", l.TryUpTries, l.serviceName, srv.ID()))
+		logger.Log().Warn(fmt.Sprintf("list name %s maximum %d try to Up service with id %s with nodeName %s reached.... service will remove from service list", l.serviceName, l.TryUpTries, srv.ID(), srv.NodeName()))
 		l.RemoveFromJail(srv)
 		return
 	}
 
-	logger.Log().Info(fmt.Sprintf("%d try to up %s service %s on %s", try, l.serviceName, srv.ID(), srv.Address()))
+	logger.Log().Info(fmt.Sprintf("list name %s %d try to up service with id %s with address %s with nodeName %s", l.serviceName, try, srv.ID(), srv.Address(), srv.NodeName()))
 
 	if err := srv.HealthCheck(); err != nil {
-		logger.Log().Warn(fmt.Errorf("service %s healthcheck error: %w", srv.ID(), err).Error())
+		logger.Log().Warn(fmt.Errorf("list name %s service with id %s with nodeName %s healthcheck error: %w", l.serviceName, srv.ID(), srv.NodeName(), err).Error())
 
 		Sleep(l.TryUpInterval, l.Stop)
 		l.TryUpService(srv, try+1)
 		return
 	}
 
-	logger.Log().Info(fmt.Sprintf("service %s is alive!", srv.ID()))
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s is alive!", l.serviceName, srv.ID(), srv.NodeName()))
 
 	l.FromJailToHealthy(srv)
 }
@@ -304,12 +305,14 @@ func (l *ServicesList) FromHealthyToJail(id string) {
 	}
 
 	if index == -1 {
+		logger.Log().Warn(fmt.Sprintf("list name %s service with id %s is not found in healthy during FromHealthyToJail", l.serviceName, id))
 		return
 	}
 
 	l.healthy = deleteFromSlice(l.healthy, index)
-
 	l.jail[srv.ID()] = srv
+
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s is moved from healthy to jail", l.serviceName, id))
 }
 
 // FromJailToHealthy move Healthy service
@@ -320,13 +323,18 @@ func (l *ServicesList) FromJailToHealthy(srv service.IService) {
 	l.mu.Unlock()
 
 	l.Add(srv)
+
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s is moved from jail to healthy", l.serviceName, srv.ID(), srv.NodeName()))
 }
 
 func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if err := l.healthy[i].Close(); err != nil {
+	srv := l.healthy[i]
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s is about to be removed from healthy by index", l.serviceName, srv.ID(), srv.NodeName()))
+
+	if err := srv.Close(); err != nil {
 		logger.Log().Warn(fmt.Errorf("unexpected error during service Close(): %w", err).Error())
 	}
 
@@ -338,6 +346,8 @@ func (l *ServicesList) RemoveFromHealthyByIndex(i int) {
 func (l *ServicesList) RemoveFromJail(srv service.IService) {
 	defer l.mu.Unlock()
 	l.mu.Lock()
+
+	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s is about to be removed from jail", l.serviceName, srv.ID(), srv.NodeName()))
 
 	if err := srv.Close(); err != nil {
 		logger.Log().Warn(fmt.Errorf("unexpected error during service Close(): %w", err).Error())
