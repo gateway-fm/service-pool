@@ -265,12 +265,12 @@ func (l *ServicesList) HealthChecksLoop() {
 // TryUpService recursively try to up service
 func (l *ServicesList) TryUpService(srv service.IService, try int) {
 	if l.TryUpTries != 0 && try >= l.TryUpTries {
-		logger.Log().Warn(fmt.Sprintf("list name %s maximum %d try to Up %s service with id %s with nodeName %s reached.... service will remove from service list", l.serviceName, l.TryUpTries, l.serviceName, srv.ID(), srv.NodeName()))
+		logger.Log().Warn(fmt.Sprintf("list name %s maximum %d try to Up service with id %s with nodeName %s reached.... service will remove from service list", l.serviceName, l.TryUpTries, srv.ID(), srv.NodeName()))
 		l.RemoveFromJail(srv)
 		return
 	}
 
-	logger.Log().Info(fmt.Sprintf("list name %s %d try to up %s service with id %s with address %s with nodeName %s", l.serviceName, try, srv.ID(), srv.Address(), srv.NodeName()))
+	logger.Log().Info(fmt.Sprintf("list name %s %d try to up service with id %s with address %s with nodeName %s", l.serviceName, try, srv.ID(), srv.Address(), srv.NodeName()))
 
 	if err := srv.HealthCheck(); err != nil {
 		logger.Log().Warn(fmt.Errorf("list name %s service with id %s with nodeName %s healthcheck error: %w", l.serviceName, srv.ID(), srv.NodeName(), err).Error())
