@@ -175,6 +175,10 @@ func (l *ServicesList) Next() service.IService {
 
 // Add service to the list
 func (l *ServicesList) Add(srv service.IService) {
+	if len(l.Healthy()) >= 1 {
+		return
+	}
+
 	if l.IsServiceExists(srv) {
 		logger.Log().Info(fmt.Sprintf("list name %s service already exists during Add, service with id %s with nodeName %s", l.serviceName, srv.ID(), srv.NodeName()))
 		return
