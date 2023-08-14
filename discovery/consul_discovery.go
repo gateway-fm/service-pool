@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"fmt"
-
 	consul "github.com/hashicorp/consul/api"
 
 	"github.com/gateway-fm/scriptorium/logger"
@@ -15,16 +14,18 @@ import (
 type ConsulDiscovery struct {
 	client    *consul.Client
 	transport TransportProtocol
+	opts      *DiscoveryOpts
 }
 
 // NewConsulDiscovery create new Consul-driven
 // service Discovery
-func NewConsulDiscovery(transport TransportProtocol, addr ...string) (IServiceDiscovery, error) {
+func NewConsulDiscovery(transport TransportProtocol, opts *DiscoveryOpts, addr ...string) (IServiceDiscovery, error) {
 	if len(addr) != 1 {
 		return nil, ErrInvalidArgumentsLength{length: len(addr), driver: DriverConsul}
 	}
 
 	config := consul.DefaultConfig()
+
 	if addr[0] != "" {
 		config.Address = addr[0]
 	}
@@ -33,8 +34,23 @@ func NewConsulDiscovery(transport TransportProtocol, addr ...string) (IServiceDi
 	if err != nil {
 		return nil, fmt.Errorf("connect to consul discovery: %w", err)
 	}
+	if opts != nil {
+		if opts.isOptional {
+			if opts.optionalPath == "" {
+				return nil, ErrEmptyOptionalPath
+			}
+			addr[0] = fmt.Sprintf(AddEndOrRemoveFirstSlashIfNeeded(addr[0]) + AddEndOrRemoveFirstSlashIfNeeded(opts.optionalPath))
+		}
+	} else {
+		opts = NilDiscoveryOptions()
+	}
+	consulDiscovery := &ConsulDiscovery{
+		client:    c,
+		transport: transport,
+		opts:      opts,
+	}
 
-	return &ConsulDiscovery{client: c, transport: transport}, nil
+	return consulDiscovery, nil
 }
 
 // Discover and return list of the active
