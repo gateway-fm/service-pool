@@ -34,15 +34,15 @@ func NewConsulDiscovery(transport TransportProtocol, opts *DiscoveryOpts, addr .
 	if err != nil {
 		return nil, fmt.Errorf("connect to consul discovery: %w", err)
 	}
-	if opts != nil {
-		if opts.isOptional {
-			if opts.optionalPath == "" {
-				return nil, ErrEmptyOptionalPath
-			}
-			addr[0] = fmt.Sprintf(AddEndOrRemoveFirstSlashIfNeeded(addr[0]) + AddEndOrRemoveFirstSlashIfNeeded(opts.optionalPath))
-		}
-	} else {
+
+	if opts == nil {
 		opts = NilDiscoveryOptions()
+	}
+	if opts.isOptional {
+		if opts.optionalPath == "" {
+			return nil, ErrEmptyOptionalPath
+		}
+		addr[0] = fmt.Sprintf(AddEndOrRemoveFirstSlashIfNeeded(addr[0]) + AddEndOrRemoveFirstSlashIfNeeded(opts.optionalPath))
 	}
 	consulDiscovery := &ConsulDiscovery{
 		client:    c,
