@@ -83,10 +83,8 @@ func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) serv
 	addr := d.transport.FormatAddress(srv.Service.Address)
 	addr = fmt.Sprintf("%s:%d", addr, srv.Service.Port)
 
-	optionalPath := d.opts.optionalPath
-
-	if d.opts.isOptional && optionalPath {
-		addr = AddEndOrRemoveFirstSlashIfNeeded(addr) + AddEndOrRemoveFirstSlashIfNeeded(optionalPath)
+	if d.opts.isOptional && d.opts.optionalPath != "" {
+		addr = AddEndOrRemoveFirstSlashIfNeeded(addr) + AddEndOrRemoveFirstSlashIfNeeded(d.opts.optionalPath)
 	}
 
 	logger.Log().Debug(fmt.Sprintf("discovered new service: %s", addr))
