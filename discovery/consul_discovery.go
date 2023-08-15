@@ -81,6 +81,7 @@ func (d *ConsulDiscovery) createNodesFromServices(consulServices []*consul.Servi
 // instance from consul service
 func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) service.IService {
 	addr := d.transport.FormatAddress(srv.Service.Address)
+	addr = fmt.Sprintf("%s:%d", addr, srv.Service.Port)
 
 	if d.opts.isOptional && d.opts.optionalPath != "" {
 		addr = AddEndOrRemoveFirstSlashIfNeeded(addr) + AddEndOrRemoveFirstSlashIfNeeded(d.opts.optionalPath)
@@ -93,5 +94,5 @@ func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) serv
 		tagsMap[t] = struct{}{}
 	}
 
-	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Service.ID, tagsMap)
+	return service.NewService(addr, srv.Service.ID, tagsMap)
 }
