@@ -47,7 +47,7 @@ func newHealthyService(addr string) service.IService {
 }
 
 func newServicesPool(discoveryInterval time.Duration, hcInterval time.Duration, mutationFunc func(srv service.IService) (service.IService, error)) IServicesPool {
-	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, "localhost")
+	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, nil, "localhost")
 
 	opts := &ServicesPoolsOpts{
 		Name:              "TestServicePool",

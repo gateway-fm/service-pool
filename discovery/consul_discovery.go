@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"fmt"
-
 	consul "github.com/hashicorp/consul/api"
 
 	"github.com/gateway-fm/scriptorium/logger"
@@ -15,16 +14,18 @@ import (
 type ConsulDiscovery struct {
 	client    *consul.Client
 	transport TransportProtocol
+	opts      *DiscoveryOpts
 }
 
 // NewConsulDiscovery create new Consul-driven
 // service Discovery
-func NewConsulDiscovery(transport TransportProtocol, addr ...string) (IServiceDiscovery, error) {
+func NewConsulDiscovery(transport TransportProtocol, opts *DiscoveryOpts, addr ...string) (IServiceDiscovery, error) {
 	if len(addr) != 1 {
 		return nil, ErrInvalidArgumentsLength{length: len(addr), driver: DriverConsul}
 	}
 
 	config := consul.DefaultConfig()
+
 	if addr[0] != "" {
 		config.Address = addr[0]
 	}
@@ -34,7 +35,22 @@ func NewConsulDiscovery(transport TransportProtocol, addr ...string) (IServiceDi
 		return nil, fmt.Errorf("connect to consul discovery: %w", err)
 	}
 
-	return &ConsulDiscovery{client: c, transport: transport}, nil
+	if opts == nil {
+		opts = NilDiscoveryOptions()
+	}
+	if opts.isOptional {
+		if opts.optionalPath == "" {
+			return nil, ErrEmptyOptionalPath
+		}
+	}
+
+	consulDiscovery := &ConsulDiscovery{
+		client:    c,
+		transport: transport,
+		opts:      opts,
+	}
+
+	return consulDiscovery, nil
 }
 
 // Discover and return list of the active
@@ -65,6 +81,12 @@ func (d *ConsulDiscovery) createNodesFromServices(consulServices []*consul.Servi
 // instance from consul service
 func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) service.IService {
 	addr := d.transport.FormatAddress(srv.Service.Address)
+	addr = fmt.Sprintf("%s:%d", addr, srv.Service.Port)
+
+	if d.opts.isOptional && d.opts.optionalPath != "" {
+		addr = AddEndOrRemoveFirstSlashIfNeeded(addr) + AddEndOrRemoveFirstSlashIfNeeded(d.opts.optionalPath)
+	}
+
 	logger.Log().Debug(fmt.Sprintf("discovered new service: %s", addr))
 
 	tagsMap := make(map[string]struct{})
@@ -72,5 +94,5 @@ func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) serv
 		tagsMap[t] = struct{}{}
 	}
 
-	return service.NewService(fmt.Sprintf("%s:%d", addr, srv.Service.Port), srv.Service.ID, tagsMap)
+	return service.NewService(addr, srv.Service.ID, tagsMap)
 }
