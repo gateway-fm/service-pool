@@ -42,8 +42,8 @@ func NewConsulDiscovery(transport TransportProtocol, opts *DiscoveryOpts, addr .
 		if opts.optionalPath == "" {
 			return nil, ErrEmptyOptionalPath
 		}
-		addr[0] = fmt.Sprintf(AddEndOrRemoveFirstSlashIfNeeded(addr[0]) + AddEndOrRemoveFirstSlashIfNeeded(opts.optionalPath))
 	}
+
 	consulDiscovery := &ConsulDiscovery{
 		client:    c,
 		transport: transport,
@@ -81,6 +81,11 @@ func (d *ConsulDiscovery) createNodesFromServices(consulServices []*consul.Servi
 // instance from consul service
 func (d *ConsulDiscovery) createServiceFromConsul(srv *consul.ServiceEntry) service.IService {
 	addr := d.transport.FormatAddress(srv.Service.Address)
+
+	if d.opts.isOptional && d.opts.optionalPath != "" {
+		addr = AddEndOrRemoveFirstSlashIfNeeded(addr) + AddEndOrRemoveFirstSlashIfNeeded(d.opts.optionalPath)
+	}
+
 	logger.Log().Debug(fmt.Sprintf("discovered new service: %s", addr))
 
 	tagsMap := make(map[string]struct{})
