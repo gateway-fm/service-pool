@@ -24,6 +24,8 @@ type IService interface {
 
 	Tags() map[string]struct{}
 
+	SetTags(map[string]struct{})
+
 	Close() error
 }
 
@@ -83,6 +85,10 @@ func (n *BaseService) SetStatus(status Status) {
 
 func (n *BaseService) Tags() map[string]struct{} {
 	return n.tags
+}
+
+func (n *BaseService) SetTags(tags map[string]struct{}) {
+	n.tags = tags
 }
 
 func (n *BaseService) Close() error {
