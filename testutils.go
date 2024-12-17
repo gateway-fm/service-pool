@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gateway-fm/service-pool/discovery"
-	"github.com/gateway-fm/service-pool/service"
+	"github.com/gateway-fm/prover-pool-lib/service"
 )
 
 type healthyService struct {
@@ -38,7 +37,7 @@ func dummyMutationFunc(srv service.IService) (service.IService, error) {
 }
 
 func newHealthyService(addr string) service.IService {
-	srv := service.NewService(addr, "", nil)
+	srv := service.NewService(addr, "", nil, 1.0)
 
 	baseSrv := srv.(*service.BaseService)
 	baseSrv.SetStatus(service.StatusHealthy)
@@ -47,18 +46,13 @@ func newHealthyService(addr string) service.IService {
 }
 
 func newServicesPool(discoveryInterval time.Duration, hcInterval time.Duration, mutationFunc func(srv service.IService) (service.IService, error)) IServicesPool {
-	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, nil, "localhost")
-
 	opts := &ServicesPoolsOpts{
-		Name:              "TestServicePool",
-		Discovery:         manualDisc,
-		DiscoveryInterval: discoveryInterval,
+		Name: "TestServicePool",
 		ListOpts: &ServicesListOpts{
 			TryUpTries:     5,
 			TryUpInterval:  1 * time.Second,
 			ChecksInterval: hcInterval,
 		},
-		MutationFnc: mutationFunc,
 	}
 
 	return NewServicesPool(opts)

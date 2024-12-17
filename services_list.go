@@ -8,8 +8,8 @@ import (
 
 	"github.com/gateway-fm/scriptorium/logger"
 
-	"github.com/gateway-fm/service-pool/pkg/utils"
-	"github.com/gateway-fm/service-pool/service"
+	"github.com/gateway-fm/prover-pool-lib/pkg/utils"
+	"github.com/gateway-fm/prover-pool-lib/service"
 )
 
 // IServicesList is generic interface for services list
@@ -23,6 +23,8 @@ type IServicesList interface {
 	// Next returns next healthy service
 	// to take a connection
 	Next() service.IService
+
+	NextLeastLoaded(tag string) service.IService
 
 	// Add service to the list
 	Add(srv service.IService)
@@ -70,8 +72,6 @@ type IServicesList interface {
 	// Jailed returns a copy of jail map
 	Jailed() map[string]service.IService
 
-	SetOnSrvAddCallback(f ServiceCallbackE)
-
 	ModifyHealthy(modifier func(srv service.IService))
 }
 
@@ -96,8 +96,6 @@ type ServicesList struct {
 	TryUpInterval time.Duration
 
 	Stop chan struct{}
-
-	onSrvAddCallback ServiceCallbackE
 }
 
 // ServicesListOpts is options that needs
@@ -173,6 +171,34 @@ func (l *ServicesList) Next() service.IService {
 	return nil
 }
 
+func (l *ServicesList) NextLeastLoaded(tag string) service.IService {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+
+	if len(l.healthy) == 0 {
+		logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
+		return nil
+	}
+
+	var leastLoadedSrv service.IService
+	minLoad := float32(1.01)
+
+	for _, srv := range l.healthy {
+		_, isTagPresent := srv.Tags()[tag]
+		if !isTagPresent {
+			continue
+		}
+
+		load := srv.Load()
+		if load < minLoad {
+			leastLoadedSrv = srv
+			minLoad = load
+		}
+	}
+
+	return leastLoadedSrv
+}
+
 // Add service to the list
 func (l *ServicesList) Add(srv service.IService) {
 	if l.IsServiceExists(srv) {
@@ -195,12 +221,6 @@ func (l *ServicesList) Add(srv service.IService) {
 	l.healthy = append(l.healthy, srv)
 	logger.Log().Info(fmt.Sprintf("list name %s service with id %s with nodeName %s with address %s added to list", l.serviceName, srv.ID(), srv.NodeName(), srv.Address()))
 	l.mu.Unlock()
-
-	if l.onSrvAddCallback != nil {
-		if err := l.onSrvAddCallback(srv); err != nil {
-			logger.Log().Warn(fmt.Sprintf("list name %s on service add callback error: %s", l.serviceName, err.Error()))
-		}
-	}
 }
 
 // IsServiceExists check is given service is
@@ -398,14 +418,6 @@ func (l *ServicesList) Jailed() map[string]service.IService {
 	}
 
 	return jailed
-}
-
-func (l *ServicesList) SetOnSrvAddCallback(f ServiceCallbackE) {
-	if l == nil {
-		return
-	}
-
-	l.onSrvAddCallback = f
 }
 
 func (l *ServicesList) ModifyHealthy(modifier func(srv service.IService)) {

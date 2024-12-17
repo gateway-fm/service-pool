@@ -1,6 +1,5 @@
-![coverage](https://raw.githubusercontent.com/gateway-fm/service-pool/badges/.badges/main/coverage.svg)
 
-# Service pool
+# prover-pool-lib
 
 This package implement service pool pattern for Go apps that
 will be useful for microservices architecture

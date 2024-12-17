@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/gateway-fm/service-pool/service"
+	"github.com/gateway-fm/prover-pool-lib/service"
 )
 
 func init() {

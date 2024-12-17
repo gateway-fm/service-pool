@@ -3,7 +3,7 @@ package pool
 import (
 	"time"
 
-	"github.com/gateway-fm/service-pool/service"
+	"github.com/gateway-fm/prover-pool-lib/service"
 )
 
 // Sleep is a helper function to Sleep
