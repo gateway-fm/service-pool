@@ -19,12 +19,14 @@ type IService interface {
 	// Address return service address
 	Address() string
 
-	// NodeName return node name from discovery
+	// NodeName return prover name from discovery
 	NodeName() string
 
 	Tags() map[string]struct{}
 
 	Close() error
+
+	Load() float32 // rating between [0.0, 1.0]
 }
 
 // TODO split address field to host and port
@@ -35,18 +37,20 @@ type BaseService struct {
 	id       string              // service unique id - sha256(address)
 	status   Status              // service current status
 	address  string              // service address to connect
-	nodeName string              // node name from discovery
+	nodeName string              // prover name from discovery
 	tags     map[string]struct{} // service tags
+	load     float32             // rating between [0.0, 1.0]
 }
 
 // NewService create new BaseService with address and discovery
-func NewService(address, nodeName string, tags map[string]struct{}) IService {
+func NewService(address, nodeName string, tags map[string]struct{}, load float32) IService {
 	return &BaseService{
-		id:       generateServiceID(address),
+		id:       GenerateServiceID(address),
 		status:   StatusUnHealthy,
 		address:  address,
 		nodeName: nodeName,
 		tags:     tags,
+		load:     load,
 	}
 }
 
@@ -72,13 +76,17 @@ func (n *BaseService) Address() string {
 	return n.address
 }
 
-// NodeName return node name from discovery
+// NodeName return prover name from discovery
 func (n *BaseService) NodeName() string {
 	return n.nodeName
 }
 
 func (n *BaseService) SetStatus(status Status) {
 	n.status = status
+}
+
+func (n *BaseService) Load() float32 {
+	return n.load
 }
 
 func (n *BaseService) Tags() map[string]struct{} {
@@ -89,9 +97,9 @@ func (n *BaseService) Close() error {
 	return nil
 }
 
-// generateServiceID create BaseService unique id by
+// GenerateServiceID create BaseService unique id by
 // hashing given address string
-func generateServiceID(addr string) string {
+func GenerateServiceID(addr string) string {
 	h := sha256.New()
 	h.Write([]byte(addr))
 	sum := h.Sum(nil)
