@@ -22,15 +22,18 @@ type IProver interface {
 
 	SetLoad(float32)
 
+	MessageId() string
+
 	service.IService
 }
 
 // Prover is basic implementation for IProver abstraction
 type Prover struct {
-	status int32
-	id     string
-	addr   string
-	name   string
+	status    int32
+	id        string
+	messageId string
+	addr      string
+	name      string
 
 	healthcheck func(n IProver) error
 
@@ -46,6 +49,7 @@ type Prover struct {
 type ProverOpts struct {
 	Name        string
 	Addr        string
+	MessageId   string
 	Healthcheck func(n IProver) error
 	Tags        map[string]struct{}
 }
@@ -58,6 +62,7 @@ func NewProver(opts *ProverOpts) (*Prover, error) {
 		tags:        opts.Tags,
 		status:      int32(service.StatusUnHealthy),
 		id:          service.GenerateServiceID(opts.Addr),
+		messageId:   opts.MessageId,
 	}
 	if err := p.initNodeClient(); err != nil {
 		return nil, err
@@ -120,6 +125,10 @@ func (p *Prover) SetStatus(status service.Status) {
 // ID return Prover unique ID
 func (p *Prover) ID() string {
 	return p.id
+}
+
+func (p *Prover) MessageId() string {
+	return p.messageId
 }
 
 // Address return Prover address
