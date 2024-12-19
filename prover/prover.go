@@ -20,8 +20,6 @@ type IProver interface {
 
 	SetStatus(service.Status)
 
-	SetLoad(float32)
-
 	MessageId() string
 
 	service.IService

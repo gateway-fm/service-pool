@@ -27,6 +27,8 @@ type IService interface {
 	Close() error
 
 	Load() float32 // rating between [0.0, 1.0]
+
+	SetLoad(float32)
 }
 
 // TODO split address field to host and port
@@ -87,6 +89,10 @@ func (n *BaseService) SetStatus(status Status) {
 
 func (n *BaseService) Load() float32 {
 	return n.load
+}
+
+func (n *BaseService) SetLoad(load float32) {
+	n.load = load
 }
 
 func (n *BaseService) Tags() map[string]struct{} {
