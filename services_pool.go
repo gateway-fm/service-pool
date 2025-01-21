@@ -20,14 +20,28 @@ type IServicesPool interface {
 	Count() int
 
 	// List return ServicesPool ServicesList instance
-	List() IServicesList
+	//List() IServicesList
 
 	// Close Stop all service pool
 	Close()
 
 	AddService(srv service.IService)
 
+	AnyByTag(tag string) service.IService
+
 	NextLeastLoaded(tag string) service.IService
+
+	// FromHealthyToJail move Unhealthy service
+	// from Healthy slice to Jail map
+	FromHealthyToJail(id string)
+
+	// FromJailToHealthy move Healthy service
+	// from Jail map to Healthy slice
+	FromJailToHealthy(srv service.IService)
+
+	// RemoveFromJail remove given
+	// service from jail map
+	RemoveFromJail(srv service.IService)
 }
 
 // ServicesPool holds information about reachable
@@ -97,12 +111,28 @@ func (p *ServicesPool) Count() int {
 }
 
 // List return ServicesPool ServicesList instance
-func (p *ServicesPool) List() IServicesList {
-	return p.list
-}
+//func (p *ServicesPool) List() IServicesList {
+//	return p.list
+//}
 
 // Close Stop all service pool
 func (p *ServicesPool) Close() {
 	p.list.Close()
 	close(p.stop)
+}
+
+func (p *ServicesPool) AnyByTag(tag string) service.IService {
+	return p.list.AnyByTag(tag)
+}
+
+func (p *ServicesPool) FromHealthyToJail(id string) {
+	p.list.FromHealthyToJail(id)
+}
+
+func (p *ServicesPool) FromJailToHealthy(srv service.IService) {
+	p.list.FromJailToHealthy(srv)
+}
+
+func (p *ServicesPool) RemoveFromJail(srv service.IService) {
+	p.list.RemoveFromJail(srv)
 }
