@@ -42,6 +42,8 @@ type Prover struct {
 	tags map[string]struct{}
 
 	load float32 // rating between [0.0, 1.0]
+
+	proverLoad *service.ProverLoad //specific prover load
 }
 
 type ProverOpts struct {
@@ -108,6 +110,14 @@ func (p *Prover) Load() float32 {
 
 func (p *Prover) SetLoad(load float32) {
 	p.load = load
+}
+
+func (n *Prover) ProverLoad() *service.ProverLoad {
+	return n.proverLoad
+}
+
+func (n *Prover) SetProverLoad(load *service.ProverLoad) {
+	n.proverLoad = load
 }
 
 // Status return Prover current status
