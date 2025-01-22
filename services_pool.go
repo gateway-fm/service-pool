@@ -31,6 +31,7 @@ type IServicesPool interface {
 
 	NextLeastLoaded(tag string) service.IService
 
+	NextLeastLoadedProver(tag string) service.IService
 	// FromHealthyToJail move Unhealthy service
 	// from Healthy slice to Jail map
 	FromHealthyToJail(id string)
@@ -98,6 +99,11 @@ func (p *ServicesPool) NextService() service.IService {
 func (p *ServicesPool) NextLeastLoaded(tag string) service.IService {
 	// TODO maybe is better to return error if next service is nil
 	return p.list.NextLeastLoaded(tag)
+}
+
+func (p *ServicesPool) NextLeastLoadedProver(tag string) service.IService {
+	// TODO maybe is better to return error if next service is nil
+	return p.list.NextLeastLoadedProver(tag)
 }
 
 func (p *ServicesPool) AddService(srv service.IService) {
