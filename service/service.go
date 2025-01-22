@@ -125,9 +125,9 @@ type ProverLoad struct {
 	// number or tasks at hand
 	TasksQueue int
 	// number of cores
-	NumberCores int
+	NumberCores uint64
 	// start time of the task running
-	CurrentComputingStartTime int64
+	CurrentComputingStartTime uint64
 
 	// not used yet
 	//TotalMemory int64
