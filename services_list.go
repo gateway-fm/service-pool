@@ -26,6 +26,8 @@ type IServicesList interface {
 
 	NextLeastLoaded(tag string) service.IService
 
+	NextLeastLoadedProver(tag string) service.IService
+
 	// AnyByTag returns any service with given tag from healthy list
 	AnyByTag(tag string) service.IService
 
@@ -195,6 +197,72 @@ func (l *ServicesList) AnyByTag(tag string) service.IService {
 	logger.Log().Warn(fmt.Sprintf("list name %s not found tag %s", l.serviceName, tag))
 
 	return nil
+}
+
+func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+
+	if len(l.healthy) == 0 {
+		logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
+		return nil
+	}
+
+	var leastLoadedSrv service.IService
+
+	var minLoad *service.ProverLoad
+
+	for _, srv := range l.healthy {
+		_, isTagPresent := srv.Tags()[tag]
+		if !isTagPresent {
+			continue
+		}
+
+		load := srv.ProverLoad()
+		if load == nil {
+			continue
+		}
+
+		if load.ProverStatus != service.GetStatusResponse_STATUS_IDLE &&
+			load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING {
+			continue
+		}
+
+		if minLoad == nil {
+			minLoad = load
+			leastLoadedSrv = srv
+			continue
+		}
+
+		switch {
+		case minLoad.TasksQueue < load.TasksQueue:
+			continue
+		case minLoad.TasksQueue > load.TasksQueue:
+			minLoad = load
+			leastLoadedSrv = srv
+			continue
+		}
+
+		switch {
+		case minLoad.NumberCores > load.NumberCores:
+			continue
+		case minLoad.NumberCores < load.NumberCores:
+			minLoad = load
+			leastLoadedSrv = srv
+			continue
+		}
+
+		switch {
+		case minLoad.CurrentComputingStartTime >= load.CurrentComputingStartTime:
+			continue
+		case minLoad.CurrentComputingStartTime < load.CurrentComputingStartTime:
+			minLoad = load
+			leastLoadedSrv = srv
+			continue
+		}
+	}
+
+	return leastLoadedSrv
 }
 
 func (l *ServicesList) NextLeastLoaded(tag string) service.IService {
