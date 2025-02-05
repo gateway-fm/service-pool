@@ -209,7 +209,6 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 	}
 
 	var leastLoadedSrv service.IService
-
 	var minLoad *service.ProverLoad
 
 	for _, srv := range l.healthy {
@@ -223,8 +222,8 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 			continue
 		}
 
-		if load.ProverStatus != service.GetStatusResponse_STATUS_IDLE &&
-			load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING {
+		if load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING &&
+			load.ProverStatus != service.GetStatusResponse_STATUS_IDLE {
 			continue
 		}
 
@@ -234,6 +233,19 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 			continue
 		}
 
+		// Prioritize IDLE over COMPUTING
+		switch {
+		case load.ProverStatus == service.GetStatusResponse_STATUS_IDLE &&
+			minLoad.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING:
+			minLoad = load
+			leastLoadedSrv = srv
+			continue
+		case load.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING &&
+			minLoad.ProverStatus == service.GetStatusResponse_STATUS_IDLE:
+			continue
+		}
+
+		// Compare other metrics if status is the same
 		switch {
 		case minLoad.TasksQueue < load.TasksQueue:
 			continue
@@ -253,9 +265,9 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 		}
 
 		switch {
-		case minLoad.CurrentComputingStartTime >= load.CurrentComputingStartTime:
+		case minLoad.CurrentComputingStartTime <= load.CurrentComputingStartTime:
 			continue
-		case minLoad.CurrentComputingStartTime < load.CurrentComputingStartTime:
+		case minLoad.CurrentComputingStartTime > load.CurrentComputingStartTime:
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
