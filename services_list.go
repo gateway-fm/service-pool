@@ -314,12 +314,12 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 	}
 
 	//DEBUG
-	if leastLoadedSrv == nil {
-		logger.Log().Info(fmt.Sprintf("No suitable service found for tag %s", tag))
-	} else {
-		logger.Log().Info(fmt.Sprintf("Final selection: Service %v with status %v",
-			leastLoadedSrv.ID(), minLoad.ProverStatus))
-	}
+	//if leastLoadedSrv == nil {
+	//	logger.Log().Info(fmt.Sprintf("No suitable service found for tag %s", tag))
+	//} else {
+	//	logger.Log().Info(fmt.Sprintf("Final selection: Service %v with status %v",
+	//		leastLoadedSrv.ID(), minLoad.ProverStatus))
+	//}
 
 	return leastLoadedSrv
 }
