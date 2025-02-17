@@ -230,7 +230,7 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 		}
 
 		if minLoad == nil {
-			logger.Log().Info(fmt.Sprintf("Service %v selected as first valid service with status %v", srv.ID(), load.ProverStatus))
+			//logger.Log().Info(fmt.Sprintf("Service %v selected as first valid service with status %v", srv.ID(), load.ProverStatus))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
