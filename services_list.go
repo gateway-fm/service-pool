@@ -204,7 +204,7 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 	l.mu.Lock()
 
 	if len(l.healthy) == 0 {
-		logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
+		//logger.Log().Error(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
 		return nil
 	}
 
