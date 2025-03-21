@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"crypto/rand"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -224,10 +225,12 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 
 		if load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING &&
 			load.ProverStatus != service.GetStatusResponse_STATUS_IDLE {
+			logger.Log().Info(fmt.Sprintf("Service %v skipped: invalid status %v", srv.ID(), load.ProverStatus))
 			continue
 		}
 
 		if minLoad == nil {
+			//logger.Log().Info(fmt.Sprintf("Service %v selected as first valid service with status %v", srv.ID(), load.ProverStatus))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
@@ -237,19 +240,27 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 		switch {
 		case load.ProverStatus == service.GetStatusResponse_STATUS_IDLE &&
 			minLoad.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING:
+			//logger.Log().Info(fmt.Sprintf("Service %v selected over %v: IDLE status preferred over COMPUTING",
+			//	srv.ID(), leastLoadedSrv.ID()))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
 		case load.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING &&
 			minLoad.ProverStatus == service.GetStatusResponse_STATUS_IDLE:
+			//logger.Log().Info(fmt.Sprintf("Service %v retained over %v: existing IDLE status preferred over COMPUTING",
+			//	leastLoadedSrv.ID(), srv.ID()))
 			continue
 		}
 
 		// Compare other metrics if status is the same
 		switch {
 		case minLoad.TasksQueue < load.TasksQueue:
+			//logger.Log().Info(fmt.Sprintf("Service %v retained over %v: lower tasks queue (%d < %d)",
+			//	leastLoadedSrv.ID(), srv.ID(), minLoad.TasksQueue, load.TasksQueue))
 			continue
 		case minLoad.TasksQueue > load.TasksQueue:
+			//logger.Log().Info(fmt.Sprintf("Service %v selected over %v: lower tasks queue (%d < %d)",
+			//	srv.ID(), leastLoadedSrv.ID(), load.TasksQueue, minLoad.TasksQueue))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
@@ -257,26 +268,195 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 
 		switch {
 		case minLoad.NumberCores > load.NumberCores:
+			//logger.Log().Info(fmt.Sprintf("Service %v retained over %v: more cores available (%d > %d)",
+			//	leastLoadedSrv.ID(), srv.ID(), minLoad.NumberCores, load.NumberCores))
 			continue
 		case minLoad.NumberCores < load.NumberCores:
+			//logger.Log().Info(fmt.Sprintf("Service %v selected over %v: more cores available (%d > %d)",
+			//	srv.ID(), leastLoadedSrv.ID(), load.NumberCores, minLoad.NumberCores))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
 		}
 
-		switch {
-		case minLoad.CurrentComputingStartTime <= load.CurrentComputingStartTime:
+		//switch {
+		//case minLoad.CurrentComputingStartTime <= load.CurrentComputingStartTime:
+		//	logger.Log().Info(fmt.Sprintf("Service %v retained over %v: earlier start time (%v < %v)",
+		//		leastLoadedSrv.ID(), srv.ID(), minLoad.CurrentComputingStartTime, load.CurrentComputingStartTime))
+		//	continue
+		//case minLoad.CurrentComputingStartTime > load.CurrentComputingStartTime:
+		//	logger.Log().Info(fmt.Sprintf("Service %v selected over %v: earlier start time (%v < %v)",
+		//		srv.ID(), leastLoadedSrv.ID(), load.CurrentComputingStartTime, minLoad.CurrentComputingStartTime))
+		//	minLoad = load
+		//	leastLoadedSrv = srv
+		//	continue
+		//}
+
+		// If we reached here, services are equal - randomly select one
+		b := make([]byte, 1)
+		_, err := rand.Read(b)
+		if err != nil {
+			logger.Log().Error(fmt.Sprintf("Failed to generate random number: %v", err))
 			continue
-		case minLoad.CurrentComputingStartTime > load.CurrentComputingStartTime:
+		}
+
+		if b[0]%2 == 0 {
+			//logger.Log().Info(fmt.Sprintf("Random selection between equal services: keeping %v over %v (all metrics equal)",
+			//	leastLoadedSrv.ID(), srv.ID()))
+			continue
+		} else {
+			//logger.Log().Info(fmt.Sprintf("Random selection between equal services: selecting %v over %v (all metrics equal)",
+			//	srv.ID(), leastLoadedSrv.ID()))
 			minLoad = load
 			leastLoadedSrv = srv
 			continue
 		}
 	}
 
+	//DEBUG
+	//if leastLoadedSrv == nil {
+	//	logger.Log().Info(fmt.Sprintf("No suitable service found for tag %s", tag))
+	//} else {
+	//	logger.Log().Info(fmt.Sprintf("Final selection: Service %v with status %v",
+	//		leastLoadedSrv.ID(), minLoad.ProverStatus))
+	//}
+
 	return leastLoadedSrv
 }
 
+/*
+func (l *ServicesList) RandomIdleComputingProver(tag string) service.IService {
+	//defer l.mu.Unlock()
+	//l.mu.Lock()
+
+	if len(l.healthy) == 0 {
+		logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's RandomIdleComputingProver() call", l.serviceName))
+		return nil
+	}
+
+	// Collect all eligible services
+	var eligibleServices []service.IService
+	for _, srv := range l.healthy {
+		_, isTagPresent := srv.Tags()[tag]
+		if !isTagPresent {
+			continue
+		}
+
+		load := srv.ProverLoad()
+		if load == nil {
+			continue
+		}
+
+		if load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING &&
+			load.ProverStatus != service.GetStatusResponse_STATUS_IDLE {
+			continue
+		}
+
+		eligibleServices = append(eligibleServices, srv)
+	}
+
+	if len(eligibleServices) == 0 {
+		logger.Log().Info(fmt.Sprintf("No eligible services found for tag %s", tag))
+		return nil
+	}
+
+	// Select random service from eligible pool using crypto/rand
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		logger.Log().Error(fmt.Sprintf("Failed to generate random number: %v", err))
+		return nil
+	}
+	selectedIndex := int(binary.BigEndian.Uint64(b) % uint64(len(eligibleServices)))
+	selectedService := eligibleServices[selectedIndex]
+
+	logger.Log().Info(fmt.Sprintf("Randomly selected service %v from %d eligible services",
+		selectedService.ID(), len(eligibleServices)))
+
+	return selectedService
+}
+*/
+/*
+RETURN TO THIS LATER AFTER DEBUG DONE
+
+	func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
+		defer l.mu.Unlock()
+		l.mu.Lock()
+
+		if len(l.healthy) == 0 {
+			logger.Log().Info(fmt.Sprintf("list name %s no healthy services are present during list's Next() call", l.serviceName))
+			return nil
+		}
+
+		var leastLoadedSrv service.IService
+		var minLoad *service.ProverLoad
+
+		for _, srv := range l.healthy {
+			_, isTagPresent := srv.Tags()[tag]
+			if !isTagPresent {
+				continue
+			}
+
+			load := srv.ProverLoad()
+			if load == nil {
+				continue
+			}
+
+			if load.ProverStatus != service.GetStatusResponse_STATUS_COMPUTING &&
+				load.ProverStatus != service.GetStatusResponse_STATUS_IDLE {
+				continue
+			}
+
+			if minLoad == nil {
+				minLoad = load
+				leastLoadedSrv = srv
+				continue
+			}
+
+			// Prioritize IDLE over COMPUTING
+			switch {
+			case load.ProverStatus == service.GetStatusResponse_STATUS_IDLE &&
+				minLoad.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING:
+				minLoad = load
+				leastLoadedSrv = srv
+				continue
+			case load.ProverStatus == service.GetStatusResponse_STATUS_COMPUTING &&
+				minLoad.ProverStatus == service.GetStatusResponse_STATUS_IDLE:
+				continue
+			}
+
+			// Compare other metrics if status is the same
+			switch {
+			case minLoad.TasksQueue < load.TasksQueue:
+				continue
+			case minLoad.TasksQueue > load.TasksQueue:
+				minLoad = load
+				leastLoadedSrv = srv
+				continue
+			}
+
+			switch {
+			case minLoad.NumberCores > load.NumberCores:
+				continue
+			case minLoad.NumberCores < load.NumberCores:
+				minLoad = load
+				leastLoadedSrv = srv
+				continue
+			}
+
+			switch {
+			case minLoad.CurrentComputingStartTime <= load.CurrentComputingStartTime:
+				continue
+			case minLoad.CurrentComputingStartTime > load.CurrentComputingStartTime:
+				minLoad = load
+				leastLoadedSrv = srv
+				continue
+			}
+		}
+
+		return leastLoadedSrv
+	}
+*/
 func (l *ServicesList) NextLeastLoaded(tag string) service.IService {
 	defer l.mu.Unlock()
 	l.mu.Lock()
