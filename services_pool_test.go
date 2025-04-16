@@ -69,7 +69,7 @@ func TestServicesPoolHealthCheckLoop(t *testing.T) {
 }
 
 func TestServicesPoolCustomList(t *testing.T) {
-	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, "localhost")
+	manualDisc, _ := discovery.NewManualDiscovery(discovery.TransportHttp, nil, "localhost")
 
 	customList := NewServicesList("testServiceList", &ServicesListOpts{
 		TryUpTries:     100,
@@ -104,7 +104,7 @@ func TestServicesPoolCustomList(t *testing.T) {
 }
 
 func TestServicesPoolDiscoveryError(t *testing.T) {
-	consulDisc, _ := discovery.NewConsulDiscovery(discovery.TransportHttp, "localhost")
+	consulDisc, _ := discovery.NewConsulDiscovery(discovery.TransportHttp, nil, "localhost")
 	opts := &ServicesPoolsOpts{
 		Name:              "TestServicePool",
 		Discovery:         consulDisc,
