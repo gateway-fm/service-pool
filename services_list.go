@@ -27,7 +27,7 @@ type IServicesList interface {
 
 	NextLeastLoaded(tag string) service.IService
 
-	NextLeastLoadedProver(tag string) service.IService
+	NextLeastLoadedProver(tag string, upload bool) service.IService
 
 	// AnyByTag returns any service with given tag from healthy list
 	AnyByTag(tag string) service.IService
@@ -200,7 +200,7 @@ func (l *ServicesList) AnyByTag(tag string) service.IService {
 	return nil
 }
 
-func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
+func (l *ServicesList) NextLeastLoadedProver(tag string, upload bool) service.IService {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
@@ -320,6 +320,13 @@ func (l *ServicesList) NextLeastLoadedProver(tag string) service.IService {
 	//	logger.Log().Info(fmt.Sprintf("Final selection: Service %v with status %v",
 	//		leastLoadedSrv.ID(), minLoad.ProverStatus))
 	//}
+
+	if upload && leastLoadedSrv != nil {
+		pl := leastLoadedSrv.ProverLoad()
+		pl.TasksQueue++
+		pl.ProverStatus = service.GetStatusResponse_STATUS_COMPUTING
+		leastLoadedSrv.SetProverLoad(pl)
+	}
 
 	return leastLoadedSrv
 }
