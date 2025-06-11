@@ -15,6 +15,9 @@ type IServicesPool interface {
 	// to take a connection
 	NextService() service.IService
 
+	ServiceById(id string) service.IService
+
+	SetProverLoadById(id string, load *service.ProverLoad)
 	// Count return numbers of
 	// all healthy services in pool
 	Count() int
@@ -104,6 +107,14 @@ func (p *ServicesPool) NextLeastLoaded(tag string) service.IService {
 func (p *ServicesPool) NextLeastLoadedProver(tag string, upload bool) service.IService {
 	// TODO maybe is better to return error if next service is nil
 	return p.list.NextLeastLoadedProver(tag, upload)
+}
+
+func (p *ServicesPool) ServiceById(id string) service.IService {
+	return p.list.ServiceById(id)
+}
+
+func (p *ServicesPool) SetProverLoadById(id string, load *service.ProverLoad) {
+	p.list.SetProverLoadById(id, load)
 }
 
 func (p *ServicesPool) AddService(srv service.IService) {

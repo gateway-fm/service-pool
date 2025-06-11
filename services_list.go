@@ -32,6 +32,10 @@ type IServicesList interface {
 	// AnyByTag returns any service with given tag from healthy list
 	AnyByTag(tag string) service.IService
 
+	ServiceById(id string) service.IService
+
+	SetProverLoadById(id string, load *service.ProverLoad)
+
 	// Add service to the list
 	Add(srv service.IService)
 
@@ -198,6 +202,29 @@ func (l *ServicesList) AnyByTag(tag string) service.IService {
 	logger.Log().Warn(fmt.Sprintf("list name %s not found tag %s", l.serviceName, tag))
 
 	return nil
+}
+
+func (l *ServicesList) ServiceById(id string) service.IService {
+	for _, srv := range l.healthy {
+		if srv.ID() == id {
+			return srv
+		}
+	}
+
+	return nil
+}
+
+func (l *ServicesList) SetProverLoadById(id string, load *service.ProverLoad) {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+
+	srv := l.ServiceById(id)
+	if srv == nil {
+		logger.Log().Error(fmt.Sprintf("cant SetProverLoadById: cant list name %s no healthy service with id %s is present", l.serviceName, id))
+		return
+	}
+
+	srv.SetProverLoad(load)
 }
 
 func (l *ServicesList) NextLeastLoadedProver(tag string, upload bool) service.IService {
